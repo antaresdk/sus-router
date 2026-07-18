@@ -1,6 +1,6 @@
 {
   "name": "com.sharq-it.sus.router",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "displayName": "SusRouter",
   "description": "Vue Router-like navigation: full guard pipeline (beforeEach/beforeResolve), query params, lazy loading, named/nested routes, redirect/alias, cursor-based history, SusRouteLink, modals, KeepAlive. Depends only on sus-core.",
   "unity": "6000.0",

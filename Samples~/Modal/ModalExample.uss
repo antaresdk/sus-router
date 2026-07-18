@@ -1,0 +1,32 @@
+/* Modal example — borderRadius via USS (Unity 6000 UITK does not support C# IStyle.border*Radius) */
+
+.modal-dlg-rounded {
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+/* Modal action buttons (OK / Cancel / Close) */
+.modal-btn {
+    padding-top: 6px;
+    padding-bottom: 6px;
+    padding-left: 20px;
+    padding-right: 20px;
+    margin-left: 6px;
+    margin-right: 6px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+    font-size: 14px;
+    color: rgb(255, 255, 255);
+}
+
+.modal-btn--ok {
+    background-color: rgb(50, 140, 70);
+}
+
+.modal-btn--cancel {
+    background-color: rgb(100, 100, 110);
+}

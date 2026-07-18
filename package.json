@@ -1,0 +1,69 @@
+{
+  "name": "com.sharq-it.sus.router",
+  "version": "1.0.0",
+  "displayName": "SusRouter",
+  "description": "Vue Router-like navigation: full guard pipeline (beforeEach/beforeResolve), query params, lazy loading, named/nested routes, redirect/alias, cursor-based history, SusRouteLink, modals, KeepAlive. Depends only on sus-core.",
+  "unity": "6000.0",
+  "license": "MIT",
+  "author": {
+    "name": "Sharq IT",
+    "email": "info@sharq-it.com",
+    "url": "https://github.com/antaresdk"
+  },
+  "keywords": [
+    "ui",
+    "uitoolkit",
+    "router",
+    "navigation",
+    "vue-router",
+    "sus",
+    "sharq"
+  ],
+  "homepage": "https://github.com/antaresdk/sus-router",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/antaresdk/sus-router.git"
+  },
+  "documentationUrl": "https://github.com/antaresdk/sus-router/blob/main/docs/README.md",
+  "changelogUrl": "https://github.com/antaresdk/sus-router/blob/main/CHANGELOG.md",
+  "dependencies": {
+    "com.sharq-it.sus.core": "^1.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Basic Routing",
+      "description": "Push/Replace/Back with SusTabs navigation. 4 screens: Home, About, Contact, Settings with sus-kit components.",
+      "path": "Samples~/BasicRouting"
+    },
+    {
+      "displayName": "KeepAlive",
+      "description": "Screen caching: counter and form keep state, Settings does not. SusTabs with a [K] indicator.",
+      "path": "Samples~/KeepAlive"
+    },
+    {
+      "displayName": "Guards",
+      "description": "Route protection: beforeEach (auth check), CanEnter, CanLeave, BeforeResolve (redirect).",
+      "path": "Samples~/Guards"
+    },
+    {
+      "displayName": "Modals & Transitions",
+      "description": "SusModal (info/confirm/stack) + SusRouteTransition.Fade/Slide + NavigateWithTransition.",
+      "path": "Samples~/Modal"
+    },
+    {
+      "displayName": "Nested & Named Routes",
+      "description": "Nested and named routes: children, PushNamed, :id, ?q=, alias, redirect, lazy loading.",
+      "path": "Samples~/AdvancedRouting"
+    },
+    {
+      "displayName": "RouteLink",
+      "description": "SusRouteLink: declarative navigation with automatic active-route highlighting.",
+      "path": "Samples~/RouteLink"
+    },
+    {
+      "displayName": "Full Demo",
+      "description": "ALL SusRouter features in one sample: sidebar, SusTabs(vertical), KeepAlive, guards, modals, transitions, named/nested, theming.",
+      "path": "Samples~/FullDemo"
+    }
+  ]
+}

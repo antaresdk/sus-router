@@ -1,0 +1,22 @@
+{
+    "name": "com.sharq-it.sus.router.runtime.tests",
+    "rootNamespace": "Sharq.Router.Runtime.Tests",
+    "references": [
+        "com.sharq-it.sus.core",
+        "com.sharq-it.sus.router",
+        "UnityEngine.TestRunner"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,53 @@
+#!/bin/bash
+# pre-push: HARD version bump — reject if source changed but package.json
+# version is not STRICTLY greater than remote (semver via sort -V).
+# Tracks: .cs (not .g.cs), .sharq, .asmdef
+set -e
+
+version_gt() {
+    local a="$1" b="$2"
+    [[ "$a" != "$b" ]] || return 1
+    local top
+    top=$(printf '%s\n%s\n' "$a" "$b" | sort -V | tail -n1)
+    [[ "$top" == "$a" ]]
+}
+
+while read local_ref local_sha remote_ref remote_sha; do
+    if [[ "$remote_sha" == "0000000000000000000000000000000000000000" ]]; then
+        continue
+    fi
+
+    changed=$(git diff --name-only "$remote_sha..$local_sha" -- '*.cs' '*.sharq' '*.asmdef' \
+        | grep -v '\.g\.cs$' || true)
+    if [[ -z "$changed" ]]; then
+        continue
+    fi
+
+    old_version=$(git show "$remote_sha:package.json" | grep '"version"' | head -1 | sed 's/.*"\([^"]*\)".*/\1/')
+    new_version=$(git show "$local_sha:package.json"  | grep '"version"' | head -1 | sed 's/.*"\([^"]*\)".*/\1/')
+
+    if ! version_gt "$new_version" "$old_version"; then
+        echo ""
+        echo "=========================================="
+        echo "  PUSH REJECTED: version not bumped"
+        echo "=========================================="
+        echo ""
+        echo "Source changed, but package.json version is not strictly greater."
+        echo "  remote: $old_version"
+        echo "  local:  $new_version"
+        echo ""
+        echo "Changed:"
+        echo "$changed" | sed 's/^/  /'
+        echo ""
+        echo "Fix:"
+        echo "  Edit package.json: bump version (ex: $old_version -> next patch/minor)"
+        echo "  git add package.json && git commit --amend -a   # or new commit"
+        echo "  git push"
+        echo ""
+        exit 1
+    fi
+
+    echo "[pre-push] Version check OK: $old_version -> $new_version"
+done
+
+exit 0

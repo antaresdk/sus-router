@@ -1,6 +1,6 @@
 # 1. Package overview
 
-> **Package:** `com.sharq-it.sus.router` · **Version:** 0.2.29 · **Analog:** Vue Router
+> **Package:** `com.sharq-it.sus.router` · **Version:** 1.0.1 · **Analog:** Vue Router
 
 ## Purpose
 

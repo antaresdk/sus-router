@@ -1,7 +1,7 @@
 # SusRouter — documentation
 
 > **Package:** `com.sharq-it.sus.router`  
-> **Version:** 0.2.29  
+> **Version:** 1.0.1  
 > **SUS UI router** — Vue Router analog: navigation, screens, modals, KeepAlive, transitions
 
 ## Table of contents

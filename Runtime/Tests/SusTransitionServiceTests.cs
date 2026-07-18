@@ -47,9 +47,12 @@ namespace Sharq.Router.Runtime.Tests
             var svc = new SusTransitionService { OverlayHost = _host };
             bool complete = false;
 
-            svc.FadeOut(0.01f, () => complete = true);
+            // Let UIDocument attach to a panel before scheduling animations.
+            yield return null;
 
-            for (int i = 0; i < 20; i++) yield return null;
+            svc.FadeOut(0f, () => complete = true);
+
+            yield return null;
             Assert.IsTrue(complete, "FadeOut should complete");
             Assert.IsTrue(svc.IsTransitioning, "Curtain should still be present");
         }
@@ -59,12 +62,14 @@ namespace Sharq.Router.Runtime.Tests
         {
             var svc = new SusTransitionService { OverlayHost = _host };
 
-            svc.FadeOut(0.01f);
-            for (int i = 0; i < 20; i++) yield return null;
+            yield return null;
+
+            svc.FadeOut(0f);
+            yield return null;
             Assert.AreEqual(1, _host.Count, "Curtain should be in overlay");
 
-            svc.FadeIn(0.01f);
-            for (int i = 0; i < 20; i++) yield return null;
+            svc.FadeIn(0f);
+            yield return null;
             Assert.AreEqual(0, _host.Count, "Curtain should be removed after FadeIn");
             Assert.IsFalse(svc.IsTransitioning);
         }

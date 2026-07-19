@@ -14,7 +14,7 @@ function Test-UnityHiddenTildePath {
 $repoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $repoRoot
 
-$staged = git diff --cached --name-only 2>$null
+$staged = git diff --cached --name-only --diff-filter=ACM 2>$null
 if (-not $staged) { exit 0 }
 
 $allFiles = git ls-files 2>$null

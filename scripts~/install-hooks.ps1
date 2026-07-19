@@ -1,5 +1,6 @@
 # Install git hooks for sus-router (one-time setup)
-# Run from repo root: .\scripts\install-hooks.ps1
+# Run from repo root: .\scripts~\install-hooks.ps1
+# Folder is `scripts~` so Unity AssetDatabase ignores git-hook tooling.
 
 $ErrorActionPreference = "Stop"
 $repoRoot = git rev-parse --show-toplevel 2>$null
@@ -9,27 +10,27 @@ if (-not $repoRoot) {
 }
 
 $hooksDir = "$repoRoot\.git\hooks"
-$scriptDir = "$repoRoot\scripts"
+$scriptDir = Join-Path $repoRoot "scripts~"
 
 if (-not (Test-Path $scriptDir)) {
-    Write-Host "ERROR: scripts/ directory not found in $repoRoot" -ForegroundColor Red
+    Write-Host "ERROR: scripts~/ directory not found in $repoRoot" -ForegroundColor Red
     exit 1
 }
 
 function Install-Hook {
     param($hookName, $scriptName)
 
-    $hookSource = "$scriptDir\$scriptName"
-    $hookDest   = "$hooksDir\$hookName"
+    $hookSource = Join-Path $scriptDir $scriptName
+    $hookDest   = Join-Path $hooksDir $hookName
 
     if (-not (Test-Path $hookSource)) {
-        Write-Host "ERROR: $scriptName not found in scripts/" -ForegroundColor Red
+        Write-Host "ERROR: $scriptName not found in scripts~/" -ForegroundColor Red
         exit 1
     }
 
     $wrapper = @"
 #!/bin/sh
-# Git $hookName hook — runs $scriptName from scripts/
+# Git $hookName hook — runs $scriptName from scripts~/
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$hookSource"
 exit `$?
 "@
@@ -47,7 +48,7 @@ Install-Hook "pre-commit" "pre-commit.ps1"
 $prePushSrc = Join-Path $scriptDir "pre-push"
 $prePushDst = Join-Path $hooksDir "pre-push"
 if (-not (Test-Path $prePushSrc)) {
-    Write-Host "ERROR: scripts/pre-push not found" -ForegroundColor Red
+    Write-Host "ERROR: scripts~/pre-push not found" -ForegroundColor Red
     exit 1
 }
 $text = [System.IO.File]::ReadAllText($prePushSrc) -replace "`r`n", "`n" -replace "`r", "`n"
@@ -55,7 +56,7 @@ $text = [System.IO.File]::ReadAllText($prePushSrc) -replace "`r`n", "`n" -replac
 
 Write-Host ""
 Write-Host "Git hooks installed:" -ForegroundColor Green
-Write-Host "  pre-commit  ->  scripts/pre-commit.ps1  (auto-generate .meta)" -ForegroundColor Green
-Write-Host "  pre-push    ->  scripts/pre-push       (HARD version bump: new > old)" -ForegroundColor Green
+Write-Host "  pre-commit  ->  scripts~/pre-commit.ps1  (auto-generate .meta)" -ForegroundColor Green
+Write-Host "  pre-push    ->  scripts~/pre-push       (HARD version bump: new > old)" -ForegroundColor Green
 Write-Host ""
 Write-Host "To uninstall: rm .git/hooks/pre-commit .git/hooks/pre-push" -ForegroundColor DarkGray

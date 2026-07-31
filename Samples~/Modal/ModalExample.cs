@@ -50,6 +50,9 @@ public class ModalExample : MonoBehaviour
 
     private void BuildContent(VisualElement root)
     {
+        var screens = root.Q<ScreenHost>(name: ScreenHost.ScreenHostName) ?? root;
+        screens.style.flexGrow = 1f;
+
         // ── Navbar: tabs + transitions ──
         var navBar = new VisualElement();
         navBar.style.flexDirection = FlexDirection.Row;
@@ -87,7 +90,7 @@ public class ModalExample : MonoBehaviour
         animToggle.Model.Changed += (_, v) =>
             hintChip.Label.Value = v ? "Fade 0.3s" : "No animation";
 
-        root.Add(navBar);
+        screens.Add(navBar);
 
         // ── Modal buttons row ──
         var modalHint = new Label(
@@ -97,7 +100,7 @@ public class ModalExample : MonoBehaviour
         modalHint.style.paddingLeft = 16;
         modalHint.style.paddingTop = 10;
         modalHint.style.paddingBottom = 6;
-        root.Add(modalHint);
+        screens.Add(modalHint);
 
         var modalRow = new VisualElement();
         modalRow.style.flexDirection = FlexDirection.Row;
@@ -137,16 +140,21 @@ public class ModalExample : MonoBehaviour
         });
         modalRow.Add(stackBtn);
 
-        root.Add(modalRow);
+        screens.Add(modalRow);
+
+        var routeSlot = new VisualElement { name = "route-slot" };
+        routeSlot.style.flexGrow = 1f;
+        screens.Add(routeSlot);
 
         // ── Router ──
         _router = new SusRouter();
+        _router.Init(SusBootstrap.GetOrCreateOverlay(root));
 
         _router.Register("/page-1", typeof(PageScreen));
         _router.Register("/page-2", typeof(PageScreen));
         _router.Register("/page-3", typeof(PageScreen));
 
-        _router.Mount(root, "/page-1");
+        _router.Mount(routeSlot, "/page-1");
         // Mount() already calls Init() internally (guarded). No need for explicit Init().
 
         // ── Floating modal controls (overlay, always above modals) ──

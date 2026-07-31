@@ -55,12 +55,13 @@ public class FullDemoExample : MonoBehaviour
 
     private void BuildContent()
     {
-        _root.style.flexGrow = 1f;
+        var screens = _root.Q<ScreenHost>(name: ScreenHost.ScreenHostName) ?? _root;
+        screens.style.flexGrow = 1f;
 
         var mainRow = new VisualElement();
         mainRow.style.flexGrow = 1f;
         mainRow.style.flexDirection = FlexDirection.Row;
-        _root.Add(mainRow);
+        screens.Add(mainRow);
 
         // ════════════════════════════════════════════════════════════════
         //  Sidebar

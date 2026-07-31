@@ -52,7 +52,8 @@ public class BasicRoutingExample : MonoBehaviour
 
     private void BuildContent(VisualElement root)
     {
-        root.style.flexGrow = 1f;
+        var screens = root.Q<ScreenHost>(name: ScreenHost.ScreenHostName) ?? root;
+        screens.style.flexGrow = 1f;
 
         // ── Navbar ──
         _navBar = new VisualElement();
@@ -87,19 +88,22 @@ public class BasicRoutingExample : MonoBehaviour
         _navBar.Add(_backBtn);
         _navBar.Add(_navTabs);
         _navBar.Add(_routeChip);
-        root.Add(_navBar);
+        screens.Add(_navBar);
 
-        // ── Overlay + Router ──
+        var routeSlot = new VisualElement { name = "route-slot" };
+        routeSlot.style.flexGrow = 1f;
+        screens.Add(routeSlot);
+
+        // Overlay on document root; RouteView in ScreenHost slot below chrome.
         _router = new SusRouter();
+        _router.Init(SusBootstrap.GetOrCreateOverlay(root));
 
         _router.Register("/home", typeof(HomeScreen));
         _router.Register("/about", typeof(AboutScreen));
         _router.Register("/contact", typeof(ContactScreen));
         _router.Register("/settings", typeof(SettingsScreen));
 
-        _router.Mount(root, "/home");
-        // Overlay host: Mount() already calls Init() internally, adding overlay as last child.
-        // No need for explicit Init() — it would be a no-op (guarded by _isInitialized).
+        _router.Mount(routeSlot, "/home");
 
         // Wire SusTabs and Back button
         _navTabs.OnTabChanged += path =>

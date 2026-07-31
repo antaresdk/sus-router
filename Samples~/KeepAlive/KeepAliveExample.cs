@@ -50,6 +50,9 @@ public class KeepAliveExample : MonoBehaviour
 
     private void BuildContent(VisualElement root)
     {
+        var screens = root.Q<ScreenHost>(name: ScreenHost.ScreenHostName) ?? root;
+        screens.style.flexGrow = 1f;
+
         // ── Tabs ──
         _navTabs = new SusTabs();
         _navTabs.Items.Value = new List<TabItem>
@@ -60,16 +63,21 @@ public class KeepAliveExample : MonoBehaviour
         };
         _navTabs.Model.Value = "/counter";
         _navTabs.style.marginBottom = 8;
-        root.Add(_navTabs);
+        screens.Add(_navTabs);
+
+        var routeSlot = new VisualElement { name = "route-slot" };
+        routeSlot.style.flexGrow = 1f;
+        screens.Add(routeSlot);
 
         // ── Router ──
         _router = new SusRouter();
+        _router.Init(SusBootstrap.GetOrCreateOverlay(root));
 
         _router.Register("/counter", typeof(CounterScreen), new SusRouteConfig { KeepAlive = true });
         _router.Register("/form", typeof(FormScreen), new SusRouteConfig { KeepAlive = true });
         _router.Register("/settings", typeof(SettingsScreen)); // NO KeepAlive
 
-        _router.Mount(root, "/counter");
+        _router.Mount(routeSlot, "/counter");
         // Mount() already calls Init() internally (guarded). No need for explicit Init().
 
         _navTabs.OnTabChanged += path =>

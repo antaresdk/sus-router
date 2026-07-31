@@ -67,6 +67,9 @@ public class GuardsExample : MonoBehaviour
 
     private void BuildContent(VisualElement root)
     {
+        var screens = root.Q<ScreenHost>(name: ScreenHost.ScreenHostName) ?? root;
+        screens.style.flexGrow = 1f;
+
         // ── Navbar ──
         var navBar = new VisualElement();
         navBar.style.flexDirection = FlexDirection.Row;
@@ -99,10 +102,15 @@ public class GuardsExample : MonoBehaviour
         _statusChip.style.marginLeft = 16;
         navBar.Add(_statusChip);
 
-        root.Add(navBar);
+        screens.Add(navBar);
+
+        var routeSlot = new VisualElement { name = "route-slot" };
+        routeSlot.style.flexGrow = 1f;
+        screens.Add(routeSlot);
 
         // ── Router + Guards ──
         _router = new SusRouter();
+        _router.Init(SusBootstrap.GetOrCreateOverlay(root));
 
         // beforeEach: auth check
         _router.BeforeEach((from, to) =>
@@ -130,7 +138,7 @@ public class GuardsExample : MonoBehaviour
             Redirect = "/admin"
         });
 
-        _router.Mount(root, "/home");
+        _router.Mount(routeSlot, "/home");
         // Mount() already calls Init() internally (guarded). No need for explicit Init().
 
         navTabs.OnTabChanged += path =>

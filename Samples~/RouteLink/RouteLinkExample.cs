@@ -40,13 +40,18 @@ public class RouteLinkExample : MonoBehaviour
 
     private void BuildContent(VisualElement root)
     {
+        var screens = root.Q<ScreenHost>(name: ScreenHost.ScreenHostName) ?? root;
+        screens.style.flexGrow = 1f;
+
+        // Overlay on document root BEFORE Mount — so Mount(content) does not create a nested host.
+        var overlayHost = SusBootstrap.GetOrCreateOverlay(root);
         _router = new SusRouter();
+        _router.Init(overlayHost);
 
         _router.Register("/home", typeof(LabelScreen));
         _router.Register("/battle/:id", typeof(LabelScreen));
         _router.Register("/settings", typeof(LabelScreen));
 
-        // Navigation links
         var navbar = new VisualElement();
         navbar.style.flexDirection = FlexDirection.Row;
         navbar.style.backgroundColor = new Color(0.15f, 0.15f, 0.15f);
@@ -61,24 +66,21 @@ public class RouteLinkExample : MonoBehaviour
         navbar.Add(_battleLink);
         navbar.Add(_settingsLink);
 
-        // Content container
         var contentContainer = new VisualElement();
         contentContainer.name = "content";
         contentContainer.style.flexGrow = 1f;
 
-        root.Add(navbar);
-        root.Add(contentContainer);
+        screens.Add(navbar);
+        screens.Add(contentContainer);
 
-        // Mount router into the content container
         var result = _router.Mount(contentContainer, "/home");
         Debug.Log($"[RouteLink] Mount: {result}");
 
-        // Bind links to the router
         _homeLink.Bind(_router);
         _battleLink.Bind(_router);
         _settingsLink.Bind(_router);
 
-        AddKeyHint("H Home    B Battle    S Settings    ← Back    → Forward    L Log");
+        AddKeyHint(screens, "H Home    B Battle    S Settings    ← Back    → Forward    L Log");
     }
 
     private void Update()
@@ -126,7 +128,7 @@ public class RouteLinkExample : MonoBehaviour
         return link;
     }
 
-    private void AddKeyHint(string text)
+    private void AddKeyHint(VisualElement screens, string text)
     {
         var hint = new Label(text)
         {
@@ -146,7 +148,7 @@ public class RouteLinkExample : MonoBehaviour
         hint.style.fontSize = 14;
         hint.style.unityTextAlign = TextAnchor.MiddleCenter;
         hint.style.whiteSpace = WhiteSpace.Normal;
-        _uiDocument.rootVisualElement.Add(hint);
+        screens.Add(hint);
     }
 
     private UIDocument GetOrCreateUIDocument()

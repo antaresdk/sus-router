@@ -49,6 +49,9 @@ public class AdvancedRoutingExample : MonoBehaviour
 
     private void BuildContent(VisualElement root)
     {
+        var screens = root.Q<ScreenHost>(name: ScreenHost.ScreenHostName) ?? root;
+        screens.style.flexGrow = 1f;
+
         // ── Navbar ──
         var navBar = new VisualElement();
         navBar.style.flexDirection = FlexDirection.Row;
@@ -80,10 +83,15 @@ public class AdvancedRoutingExample : MonoBehaviour
         });
         navBar.Add(backBtn);
 
-        root.Add(navBar);
+        screens.Add(navBar);
+
+        var routeSlot = new VisualElement { name = "route-slot" };
+        routeSlot.style.flexGrow = 1f;
+        screens.Add(routeSlot);
 
         // ── Router ──
         _router = new SusRouter();
+        _router.Init(SusBootstrap.GetOrCreateOverlay(root));
 
         // Named route
         _router.Register("/battle/:id", typeof(BattleScreen), new SusRouteConfig
@@ -134,7 +142,7 @@ public class AdvancedRoutingExample : MonoBehaviour
             return true;
         });
 
-        _router.Mount(root, "/main-menu");
+        _router.Mount(routeSlot, "/main-menu");
         // Mount() already calls Init() internally (guarded). No need for explicit Init().
 
         _navTabs.OnTabChanged += path =>

@@ -3,7 +3,7 @@
 Navigation for SUS — a **vue-router** analog for Unity UI Toolkit. Screens, nested routes,
 guards, keep-alive, modals, and transitions on top of `sus-core`.
 
-> **Version:** 1.0.1 · **Namespace:** `Sharq.Router` · **Depends on:** `com.sharq-it.sus.core` (^1.0.0)
+> **Version:** 1.0.2 · **Namespace:** `Sharq.Router` · **Depends on:** `com.sharq-it.sus.core` (^1.0.0)
 
 ## Quick start (via `SusApp`)
 

@@ -4,6 +4,16 @@
 # Tracks: .cs (not .g.cs), .sharq, .asmdef
 set -e
 
+# docs tooling gate (workspace umbrella; skip when absent)
+UMBRELLA="$(cd "$(git rev-parse --show-toplevel)/.." && pwd)"
+PKG="$(basename "$(git rev-parse --show-toplevel)")"
+if [ -f "$UMBRELLA/tools/docs-tool/index.mjs" ]; then
+    if ! node "$UMBRELLA/tools/docs-tool/index.mjs" verify --scope "$PKG"; then
+        echo "[pre-push] docs tooling verify failed - run 'npm run docs:loop' in the umbrella, commit, retry" >&2
+        exit 1
+    fi
+fi
+
 version_gt() {
     local a="$1" b="$2"
     [[ "$a" != "$b" ]] || return 1

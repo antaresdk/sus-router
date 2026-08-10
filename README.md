@@ -45,8 +45,7 @@ SusApp.Create(GetComponent<UIDocument>())
 ## Screens navigated by sus-router
 
 `sus-router` renders no widgets of its own — it mounts and transitions screens/modals that other
-packages ([`downstream library`](https://github.com/antaresdk/downstream library), `downstream library`) define. <!-- sus:ok repo-ссылка, не install-тег -->
-Example screens and
+packages (`downstream library`, `downstream library`) define. Example screens and
 modals moving through `Push`/`Replace`/`SusModalService`:
 
 <table>

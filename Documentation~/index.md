@@ -6,17 +6,21 @@ guards, keep-alive, modals, and transitions on top of `sus-core`.
 - **Package:** `com.sharq-it.sus.router`
 - **Depends on:** `com.sharq-it.sus.core` (`^1.0.0`)
 - **Namespaces:** `Sharq.Core` (bootstrap) + `Sharq.Router` (screens / navigation)
+<!-- sus:gen unity kind=min -->
 - **Unity:** 6000.0+ (UI Toolkit)
+<!-- /sus:gen -->
 
 ## Install
 
 Add the dependency (free, MIT) via Package Manager → *Add package from git URL*, or in
 `Packages/manifest.json`:
 
+<!-- sus:gen urls -->
 ```json
 "com.sharq-it.sus.router": "https://github.com/antaresdk/sus-router.git#v1.0.3",
 "com.sharq-it.sus.core":   "https://github.com/antaresdk/sus-core.git#v1.0.6"
 ```
+<!-- /sus:gen -->
 
 ## Quick start
 

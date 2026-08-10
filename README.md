@@ -42,6 +42,24 @@ SusApp.Create(GetComponent<UIDocument>())
 - **KeepAlive**: cached screen instances; key via `KeepAliveKey(route)` (option `KeepAliveIgnoreQuery`).
 - **Guards**: sync and async `BeforeEnter`/`BeforeLeave`/`beforeResolve`.
 
+## Screens navigated by sus-router
+
+`sus-router` renders no widgets of its own — it mounts and transitions screens/modals that other
+packages ([`downstream library`](https://github.com/antaresdk/downstream library), `downstream library`) define. <!-- sus:ok repo-ссылка, не install-тег -->
+Example screens and
+modals moving through `Push`/`Replace`/`SusModalService`:
+
+<table>
+<tr>
+<td><img src="Documentation~/images/game-menu-screen-chrome.png" width="260" alt="Route screen"><br><sub>Root route screen (menu)</sub></td>
+<td><img src="Documentation~/images/game-lobby-screen-content.png" width="260" alt="Nested route"><br><sub>Nested route tabs (`ChildView`)</sub></td>
+</tr>
+<tr>
+<td><img src="Documentation~/images/game-confirm-quit-content.png" width="260" alt="SusModal"><br><sub>`SusModal` content — guard confirmation</sub></td>
+<td><img src="Documentation~/images/kit-breadcrumbs.png" width="260" alt="SusBreadcrumbs"><br><sub>SusBreadcrumbs — route trail</sub></td>
+</tr>
+</table>
+
 ## Namespace
 
 Router types live in `Sharq.Router` (after the P1.4 refactor). Import both namespaces:

@@ -21,7 +21,6 @@
 | 9 | [Gap Analysis vs Vue Router](./11-gap-analysis.md) | Phases A/B/C: what is implemented, what is deferred |
 | 10 | [Glossary](./12-glossary.md) | Terms: Record, Route, Guard, KeepAlive, Overlay, Props, Query |
 
-> Package-only checklists `08-implementation-plan.md` / `09-audit.md` are not linked from this TOC (internal/historical).
 
 ## Quick start
 
@@ -91,7 +90,5 @@ router.Mount(root, "/home");
 
 ## Related docs
 
-- [sus-core Docs](../../sus-core/Docs/README.md) — core (reactivity, OverlayHost, bindings)
-- [downstream library Docs](../../downstream library/docs/README.md) — UI kit components
-- [Roadmap (sample scenes)](../roadmap/EXAMPLE_SCENES_PLAN.md) — sample creation plan
-- [Roadmap (audit)](../roadmap/SUSROUTER_AUDIT_FIXES.md) — completed and deferred tasks
+- [sus-core guide](https://sus-ui.dev/docs/guide/) — core (reactivity, OverlayHost, bindings)
+- downstream library package docs (`downstream library/docs/`) — UI kit components

@@ -83,7 +83,6 @@ sus-router/
 │   ├── AdvancedRouting/
 │   ├── RouteLink/
 │   └── FullDemo/
-└── roadmap/
 ```
 
 ## Key metrics: prototype → SusRouter

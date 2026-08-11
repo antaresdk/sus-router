@@ -29,9 +29,9 @@ namespace Sharq.Router
         }
 
         public static SusRouteTransition None() => new(null, 0);
-        public static SusRouteTransition Fade()       => new("fade",       0.3f);
-        public static SusRouteTransition SlideLeft()  => new("slide-left",  0.3f);
-        public static SusRouteTransition SlideRight() => new("slide-right", 0.3f);
+        public static SusRouteTransition Fade(float durationS = 0.3f) => new("fade", durationS);
+        public static SusRouteTransition SlideLeft(float durationS = 0.3f) => new("slide-left", durationS);
+        public static SusRouteTransition SlideRight(float durationS = 0.3f) => new("slide-right", durationS);
 
         // ════════════════════════════════════════════════════════════════
         //  PlayOut / PlayIn — code-based, no USS transition-property
@@ -52,13 +52,14 @@ namespace Sharq.Router
             var startX = startTranslate.x;
             var startY = startTranslate.y;
             float elapsed = 0f;
+            IVisualElementScheduledItem item = null;
 
-            // Pre-allocate schedule for current frame
-            var startTime = Time.realtimeSinceStartup;
-
-            element.schedule.Execute(() =>
+            // Accumulate ~16ms per schedule tick (Every(16)). Wall-clock
+            // realtimeSinceStartup barely advances under batchmode/-nographics
+            // when many frames execute in a few ms — animations would never finish.
+            item = element.schedule.Execute(() =>
             {
-                elapsed = Time.realtimeSinceStartup - startTime;
+                elapsed += 0.016f;
                 float t = Mathf.Clamp01(elapsed / Duration);
                 // Ease-in-out
                 t = t < 0.5f ? 2f * t * t : -1f + (4f - 2f * t) * t;
@@ -79,6 +80,7 @@ namespace Sharq.Router
                     element.style.translate = StyleKeyword.Null;
                     if (element.parent != null)
                         element.parent.Remove(element);
+                    item?.Pause();
                 }
             }).Every(16); // ~60 FPS
         }
@@ -101,11 +103,11 @@ namespace Sharq.Router
             }
 
             float elapsed = 0f;
-            var startTime = Time.realtimeSinceStartup;
+            IVisualElementScheduledItem item = null;
 
-            element.schedule.Execute(() =>
+            item = element.schedule.Execute(() =>
             {
-                elapsed = Time.realtimeSinceStartup - startTime;
+                elapsed += 0.016f;
                 float t = Mathf.Clamp01(elapsed / Duration);
                 // Ease-out
                 t = 1f - (1f - t) * (1f - t);
@@ -124,6 +126,7 @@ namespace Sharq.Router
                 {
                     element.style.opacity = StyleKeyword.Null;
                     element.style.translate = StyleKeyword.Null;
+                    item?.Pause();
                 }
             }).Every(16);
         }

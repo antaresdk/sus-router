@@ -81,10 +81,17 @@ namespace Sharq.Router
             wrapper.pickingMode = PickingMode.Position;
             EnsureSusModalSheet(wrapper);
 
-            // Scrim — dims background, click outside dismisses
+            // Scrim — dims background, click outside dismisses via Close()
+            // (respects BeforeDismiss; keeps SusModalService stack in sync —
+            // OverlayHost dismissOnClickOutside alone would desync our stack).
             var scrim = new VisualElement { name = "modal-scrim" };
             scrim.AddToClassList("modal-scrim");
             scrim.pickingMode = PickingMode.Position;
+            scrim.RegisterCallback<ClickEvent>(evt =>
+            {
+                Close();
+                evt.StopPropagation();
+            });
             wrapper.Add(scrim);
 
             // Centered content box — sizes to child (do NOT StretchFill the modal)
@@ -94,18 +101,20 @@ namespace Sharq.Router
             wrapper.Add(contentBox);
 
             // ── Add to overlay host ──
+            // dismissOnClickOutside: false — dismissal is owned by scrim → Close()
+            // so BeforeDismiss / Dismissed / CountProp stay consistent.
             var overlayEntry = OverlayHost.AddToOverlay(wrapper, OverlayCategory.Modal,
-                dismissOnClickOutside: true);
+                dismissOnClickOutside: false);
 
             _stack.Push(new ModalEntry { Modal = modal, Wrapper = wrapper, Overlay = overlayEntry });
 
             SyncCount();
 
-            // ── Lifecycle: Shown after DOM is ready ──
+            // ── Lifecycle: Shown on next panel update (DOM ready) ──
             modal.schedule.Execute(() =>
             {
-                modal.Shown();
-            }).ExecuteLater(16);
+                modal.NotifyShown();
+            });
 
             return modal;
         }
@@ -117,19 +126,20 @@ namespace Sharq.Router
         {
             if (_stack.Count == 0) return;
             var entry = _stack.Pop();
-            CloseEntry(entry);
+            CloseEntry(entry, force: false);
             SyncCount();
         }
 
         /// <summary>
-        /// Closes all open modals.
+        /// Closes all open modals. Forces dismissal (ignores BeforeDismiss) so
+        /// a refusing top modal cannot trap the stack / TearDown in a loop.
         /// </summary>
         public void CloseAll()
         {
             while (_stack.Count > 0)
             {
                 var entry = _stack.Pop();
-                CloseEntry(entry);
+                CloseEntry(entry, force: true);
             }
             SyncCount();
         }
@@ -139,12 +149,12 @@ namespace Sharq.Router
         /// </summary>
         public int Count => _stack.Count;
 
-        private void CloseEntry(ModalEntry entry)
+        private void CloseEntry(ModalEntry entry, bool force)
         {
             if (entry == null) return;
             if (entry.Modal == null) return;
 
-            if (!entry.Modal.BeforeDismiss())
+            if (!force && !entry.Modal.BeforeDismiss())
             {
                 // Guard cancelled — push back onto stack
                 _stack.Push(entry);

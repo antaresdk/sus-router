@@ -122,10 +122,13 @@ namespace Sharq.Router
             if (target == null) return;
             _animation?.Pause();
             if (duration <= 0.001f) { step(1f); onComplete?.Invoke(); return; }
-            float startTime = Time.unscaledTime;
+            float elapsed = 0f;
+            // Fixed 16ms per tick — matches Every(16). Wall-clock unscaledTime barely
+            // advances when many playmode frames run in a few ms (batchmode/-nographics).
             _animation = target.schedule.Execute(() =>
             {
-                float t = Mathf.Clamp01((Time.unscaledTime - startTime) / duration);
+                elapsed += 0.016f;
+                float t = Mathf.Clamp01(elapsed / duration);
                 step(Mathf.SmoothStep(0f, 1f, t));
                 if (t >= 1f) { _animation?.Pause(); onComplete?.Invoke(); }
             });

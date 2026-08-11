@@ -39,10 +39,16 @@ namespace Sharq.Router
         // (same contract as SusScreen.Build()).
 
         /// <summary>
-        /// Called AFTER the modal is added to the overlay DOM.
+        /// Called by <see cref="SusModalService"/> AFTER the modal is added to the overlay DOM.
+        /// Delegates to <see cref="Shown"/>. Do NOT override this method — override Shown instead.
+        /// </summary>
+        public void NotifyShown() => Shown();
+
+        /// <summary>
+        /// Override to react after the modal is in the overlay DOM.
         /// Router and Props ARE available here.
         /// </summary>
-        protected internal virtual void Shown() { }
+        protected virtual void Shown() { }
 
         /// <summary>
         /// Guard called before the modal is closed.

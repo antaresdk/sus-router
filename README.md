@@ -43,6 +43,21 @@ SusApp.Create(GetComponent<UIDocument>())
 - **Guards**: sync and async `BeforeEnter`/`BeforeLeave`/`beforeResolve`.
 
 
+## Gallery
+
+Package samples (raw UITK after rewrite) — routing, modals, keep-alive, full demo:
+
+<table>
+<tr>
+<td><img src="Documentation~/images/basic-routing.png" width="280" alt="Basic routing"><br><sub>BasicRouting — tabs + Push/Replace</sub></td>
+<td><img src="Documentation~/images/modal.png" width="280" alt="Modal overlay"><br><sub>Modal — OverlayHost info dialog</sub></td>
+</tr>
+<tr>
+<td><img src="Documentation~/images/full-demo.png" width="280" alt="Full demo"><br><sub>FullDemo — sidebar + nested screens</sub></td>
+<td><img src="Documentation~/images/keepalive.png" width="280" alt="KeepAlive counter"><br><sub>KeepAlive — counter state preserved</sub></td>
+</tr>
+</table>
+
 ## Namespace
 
 Router types live in `Sharq.Router` (after the P1.4 refactor). Import both namespaces:

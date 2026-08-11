@@ -32,7 +32,7 @@
 
 > **Caveat:** nested routes — URL nesting only, no layout wrapper or nested `<router-view>`. Async guards — sync for now (TODO).
 
-## Phase A — replacing NavPrototype ✅
+## Phase A — core navigation ✅
 
 ### A.1 `router.go(n)` and `router.forward()`
 
@@ -80,7 +80,7 @@ Parsing `?key=val&key2=val2`. ` SusRoute.Query` — ` Dictionary<string, string>
 
 | Phase | Tasks | Status |
 |---|---|---|
-| Phase A — replace NavPrototype | 3 | ✅ |
+| Phase A — core navigation | 3 | ✅ |
 | Phase B — DX improvements | 3 | ✅ |
 | Phase C — nice-to-have | 3 | ✅ |
 | **Total** | **9** | **✅ 100%** |

@@ -85,12 +85,3 @@ sus-router/
 │   └── FullDemo/
 ```
 
-## Key metrics: prototype → SusRouter
-
-| Metric | Prototype | SusRouter |
-|---|---|---|
-| Navigation classes | 7+ (monolith) | 10 (focused) |
-| Guards | ❌ | ✅ Full pipeline |
-| Animations | ❌ | ✅ Code-based Fade/Slide |
-| History stack | Manual | Cursor-based `_historyIndex` |
-| Dependencies | GameApp, ECS, UIManager | `sus-core` only |

@@ -16,10 +16,9 @@
 | 4 | [SusRouteView + KeepAlive](./04-routeview.md) | Visual container, screen swaps, KeepAlive LRU cache, nested routes |
 | 5 | [Modal dialogs](./05-modals.md) | SusRouterModal base class, SusModalService: modal stack, DismissOnClickOutside |
 | 6 | [Guards and transitions](./06-guards-transitions.md) | Guard pipeline (beforeEach/CanEnter/CanLeave/BeforeResolve), SusRouteTransition (code-based) |
-| 7 | [Comparison with prototype](./07-notes.md) | NavPrototype vs SusRouter: metrics, architecture |
-| 8 | [Running the samples](./10-examples.md) | 7 samples: BasicRouting, KeepAlive, Guards, Modals, Nested+Named, RouteLink, FullDemo |
-| 9 | [Gap Analysis vs Vue Router](./11-gap-analysis.md) | Phases A/B/C: what is implemented, what is deferred |
-| 10 | [Glossary](./12-glossary.md) | Terms: Record, Route, Guard, KeepAlive, Overlay, Props, Query |
+| 7 | [Running the samples](./10-examples.md) | 7 samples: BasicRouting, KeepAlive, Guards, Modals, Nested+Named, RouteLink, FullDemo |
+| 8 | [Gap Analysis vs Vue Router](./11-gap-analysis.md) | Phases A/B/C: what is implemented, what is deferred |
+| 9 | [Glossary](./12-glossary.md) | Terms: Record, Route, Guard, KeepAlive, Overlay, Props, Query |
 
 
 ## Quick start
@@ -74,7 +73,6 @@ router.Mount(root, "/home");
 - **Build a modal** → [05-modals.md](./05-modals.md)
 - **Add guards/transitions** → [06-guards-transitions.md](./06-guards-transitions.md)
 - **Run the samples** → [10-examples.md](./10-examples.md)
-- **See how SusRouter improves on the prototype** → [07-notes.md](./07-notes.md)
 
 ## Samples (Samples~/)
 

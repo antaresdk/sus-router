@@ -1,10 +1,10 @@
 ﻿# 10. Running the samples (Samples~)
 
-The package ships **7 standalone samples** under `Samples~/`. The samples additionally use the optional SUS UI component library (see https://sus-ui.dev).
+The package ships **7 standalone samples** under `Samples~/`. UI chrome uses **standard Unity UI Toolkit** controls (`Button`, `Label`, `TextField`, `Toggle`, `ScrollView`) — no downstream UI package is required.
 
 ## Requirements
 
-- `sus-router` + `sus-core` installed in the project (plus the optional SUS UI library from https://sus-ui.dev for the styled widgets)
+- `sus-router` + `sus-core` installed in the project
 - UPM Samples imported: Window → Package Manager → SusRouter → Samples → Import
 - Scene with UIDocument (EventSystem required)
 - Each sample: `[RequireComponent(typeof(UIDocument))]`
@@ -36,33 +36,33 @@ The package ships **7 standalone samples** under `Samples~/`. The samples additi
 
 Demonstrates basic navigation: Push, Replace, Back, Home, CurrentRoute display.
 
-### Navigation — the tab bar
+### Navigation — UITK tab bar
 
-4 tabs: Home, About, Contact, Settings. Each tab Pushes the matching path via the tab bar.
+4 tab `Button`s: Home, About, Contact, Settings. Each tab Pushes the matching path.
 
 ### Screens
 
-- **HomeScreen** — greeting + SusRouteLink to About, a toggle, an image
-- **AboutScreen** — description + SusRouteLink to Contact
-- **ContactScreen** — a text field with Prop, submit a button
-- **SettingsScreen** — a chip with CurrentRoute
+- **HomeScreen** — greeting + navigation buttons + route chip (`Label`)
+- **AboutScreen** — description + `SusRouteLink` to Home + image placeholder
+- **ContactScreen** — `TextField`s + submit `Button`
+- **SettingsScreen** — `Toggle`s
 
 ### Action buttons
 
-- **Back** / **Forward** — a button, drives navigation
-- **Log** — logs CurrentRoute.FullPath
+- **Back** — UITK `Button`, drives navigation
+- Current route shown as a chip `Label`
 
 ### Key code
 
 ```csharp
-// the tab bar navigation
+// tab bar navigation
 void OnTabChanged(string path)
 {
     Router.Push(path);
 }
 
 // SusRouteLink
-var link = new SusRouteLink { To = "/about", Text = "About" };
+var link = new SusRouteLink { To = "/about", Exact = true };
 link.Bind(Router); // enables router-link-active
 ```
 
@@ -74,15 +74,15 @@ link.Bind(Router); // enables router-link-active
 
 Shows the difference between KeepAlive=true (state preserved) and false (recreated).
 
-### Navigation — the tab bar
+### Navigation — UITK tab bar
 
 3 tabs: Counter [K], Form [K], Settings. [K] = KeepAlive=true.
 
 ### Screens
 
-- **CounterScreen (KeepAlive)** — Prop\<int\> counter, a button +/-, multiplier a toggle. Count survives leave/return.
-- **FormScreen (KeepAlive)** — a text field with Prop\<string\>. Typed text survives tab switches.
-- **SettingsScreen (NOT KeepAlive)** — recreated every time.
+- **CounterScreen (KeepAlive)** — counter + `Button` +/−. Count survives leave/return.
+- **FormScreen (KeepAlive)** — `TextField`s. Typed text survives tab switches.
+- **SettingsScreen (NOT KeepAlive)** — `Toggle`s; recreated every time.
 
 ### Key code
 
@@ -100,37 +100,35 @@ Router.Register("/settings", typeof(SettingsScreen)); // KeepAlive=false
 
 Demonstrates the guard pipeline.
 
-### Navigation — the tab bar
+### Navigation — UITK tab bar
 
-4 tabs: Home (always), Dashboard (authenticated), Admin (admin only), About (always). Access to Admin/Dashboard via a toggle "Login"/"Admin".
+4 tabs: Home, Admin, Profile, OldAdmin. Auth via a `Toggle` "Logged in".
 
 ### Guards
 
-- **BeforeEach** — checks auth for Meta["requiresAuth"]=true
-- **AuthGuard** — ISusRouteGuard.CanEnter checks "admin" role
-- **BeforeResolve** — redirects `/old-admin` → `/admin`
+- **BeforeEach** — blocks non-home routes when not logged in
+- **AdminGuard** — `ISusRouteGuard.CanLeave` when the admin form is dirty
+- **Redirect** — `/old-admin` → `/admin` via `SusRouteConfig.Redirect`
 
 ### Screens
 
-- **HomeScreen** — greeting + auth status (a chip)
-- **DashboardScreen** — a text field "Dashboard content"
-- **AdminScreen** — admin panel (admins only)
-- **AboutScreen** — guard info
+- **HomeScreen** — instructions + try-it buttons
+- **AdminScreen** — `TextField` form + dirty CanLeave confirm overlay
+- **ProfileScreen** — available only when logged in
 
 ### Key code
 
 ```csharp
 Router.BeforeEach((from, to) =>
 {
-    if (to.Record?.Config?.Meta?.ContainsKey("requiresAuth") == true && !_isLoggedIn.Value)
-        return false; // block
+    if (to.FullPath == "/home") return true;
+    if (!_isLoggedIn) return false; // block
     return true;
 });
 
 Router.Register("/admin", typeof(AdminScreen), new SusRouteConfig
 {
-    Guard = new AuthGuard(),
-    Meta = new() { ["requiresAuth"] = true, ["role"] = "admin" }
+    Guard = new AdminGuard()
 });
 ```
 
@@ -140,23 +138,21 @@ Router.Register("/admin", typeof(AdminScreen), new SusRouteConfig
 
 **Script:** `ModalExample.cs`
 
-Demonstrates SusRouterModal, modal contentService, and transition animations.
+Demonstrates SusRouterModal, modal service, and transition animations.
 
-### Navigation — the tab bar
+### Navigation — UITK tab bar
 
-3 tabs: Home, Dashboard, About. Navigation with Fade/Slide via NavigateWithTransition.
+3 tabs: Page 1–3. Navigation with Fade via NavigateWithTransition (optional `Toggle`).
 
 ### Modals
 
-- **InfoDialog** — info message with SusIcon + OK a button
-- **ConfirmDialog** — confirmation with OK/Cancel a buttons
+- **InfoDialog** — info message + Close `Button`
+- **ConfirmDialog** — confirmation with OK/Cancel `Button`s
 
 ### Action buttons
 
-- **Info** — show InfoDialog
-- **Confirm** — show ConfirmDialog
-- **Close** — modal contentService.Close()
-- **Toggle Dismiss** — toggle dismissOnClickOutside
+- **Open Info** / **Open Confirm** / **Stack 3**
+- **Close Top** — `ModalService.Close()`
 
 ### Key code
 
@@ -167,9 +163,8 @@ Router.ModalService.Show(typeof(InfoDialog), new() {
     ["message"] = "Welcome!"
 });
 
-// Navigate with animation (slide)
-Router.NavigateWithTransition("/dashboard",
-    SusRouteTransitionType.SlideLeft, 0.4f);
+// Navigate with animation
+Router.NavigateWithTransition("/page-2", 0.3f);
 ```
 
 ---
@@ -180,17 +175,17 @@ Router.NavigateWithTransition("/dashboard",
 
 Demonstrates named routes, nested routes, alias, redirect, query params, lazy loading.
 
-### Navigation — the tab bar
+### Navigation — UITK tab bar
 
-6 tabs: Main Menu (alias), Battle (:id), Settings (nested), Search (?q=), Lazy, Old Menu (redirect).
+5 tabs: Main Menu (alias), Battle (:id), Settings (nested), Search (?q=), Lazy.
 
 ### Capabilities
 
 - **Named route** — `/battle/:id`, PushNamed with pathParams
 - **Alias** — `/menu` → `/main-menu`
 - **Redirect** — `/old-menu` → `/main-menu`
-- **Nested** — `/settings/profile`, `/settings/privacy` (the tab bar inside SettingsScreen)
-- **Query** — `/search?q=sus-router`
+- **Nested** — `/settings/profile`, `/settings/privacy` (tab bar inside SettingsScreen)
+- **Query** — `/search?q=hello&page=1`
 - **Lazy** — `/lazy`, LazyFactory
 
 ### Key code
@@ -209,8 +204,8 @@ Router.Register("/settings", typeof(SettingsScreen), new SusRouteConfig
 {
     Children = new List<SusRouteRecord>
     {
-        new SusRouteRecord("profile", typeof(ProfileScreen)),
-        new SusRouteRecord("privacy", typeof(PrivacyScreen)),
+        new SusRouteRecord("profile", typeof(LabelScreen)),
+        new SusRouteRecord("privacy", typeof(LabelScreen)),
     }
 });
 ```
@@ -225,22 +220,22 @@ Demonstrates SusRouteLink with auto-highlighting.
 
 ### Navigation — SusRouteLink
 
-Three SusRouteLink instances on screen: Home, Battle, Settings. Each automatically gets `router-link-active` / ` router-link-exact-active`classes.
+Three SusRouteLink instances on screen: Home, Battle, Settings. Each automatically gets `router-link-active` / `router-link-exact-active` classes.
 
 ### Key code
 
 ```csharp
-var homeLink = new SusRouteLink { To = "/home", Text = "Home" };
+var homeLink = new SusRouteLink { To = "/home", Exact = true };
 homeLink.Bind(Router); // auto-highlight
 
-var battleLink = new SusRouteLink { To = "/battle/42", Text = "Battle" };
+var battleLink = new SusRouteLink { To = "/battle/42" };
 battleLink.Bind(Router);
 ```
 
 Exact match is also available:
 
 ```csharp
-var exactLink = new SusRouteLink { To = "/home", Text = "Home", Exact = true };
+var exactLink = new SusRouteLink { To = "/home", Exact = true };
 // router-link-exact-active only on exact /home
 ```
 
@@ -254,39 +249,29 @@ Comprehensive sample combining ALL router features + theming.
 
 ### Layout — sidebar + content
 
-- **Sidebar** — vertical the tab bar: Dashboard, Users, Settings, About
-- **Content** — SusRouteView with screens
+- **Sidebar** — vertical UITK tab `Button`s: Dashboard, Users, Settings, About
+- **Content** — `ScrollView` + mounted route host
 
 ### Features
 
-- KeepAlive: DashboardScreen keeps its counter
-- Guards: AboutScreen only for authenticated users (Login a toggle)
-- Modals: "Logout" a button → ConfirmDialog
+- KeepAlive: Dashboard / Users
+- Guards: UserDetailGuard on nested `:id`
+- Modals: "Open Modal" → AboutDialog (`SusRouterModal`)
 - Transitions: Fade between screens
-- Nested: SettingsScreen with Profile/Privacy sub-tabs (the tab bar)
-- Named: /users/:id via PushNamed
-- Theming: a chip with current theme
+- Nested: `/users/:id`
+- Named: users / user-detail
+- Theming: `Toggle` Dark + `SusThemeService`
 
 ### Key code
 
 ```csharp
-// Sidebar — vertical the tab bar
-the tab bar sidebar = ...;
-sidebar.Direction.Value = "vertical";
-sidebar.Items.Value = new List<TabItem>
-{
-    new() { Id = "dashboard", Label = "Dashboard" },
-    new() { Id = "users", Label = "Users" },
-    new() { Id = "settings", Label = "Settings" },
-    new() { Id = "about", Label = "About" },
-};
-sidebar.OnTabChanged += (id) => Router.Push($"/{id}");
+// Sidebar — vertical tab buttons push routes
+navTabs.OnChanged += path => Router.Push(path);
 
-// Modal on Logout
-Router.ModalService.Show(typeof(ConfirmDialog), new() {
-    ["title"] = "Logout",
-    ["message"] = "Are you sure?",
-    ["onConfirm"] = (Action)(() => { _isLoggedIn.Value = false; })
+// Modal
+Router.ModalService.Show(typeof(AboutDialog), new() {
+    ["title"] = "About",
+    ["message"] = "SusRouter Full Demo"
 });
 ```
 
@@ -296,8 +281,8 @@ Router.ModalService.Show(typeof(ConfirmDialog), new() {
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Nothing shows | UIDocument without PanelSettings | GetOrCreateUIDocument() sets it |
-| the tab bar do nothing | OnTabChanged not wired | Bind Router.Push in the handler |
+| Nothing shows | UIDocument without PanelSettings | Assign PanelSettings / sample loads Resources |
+| Tab buttons do nothing | OnChanged not wired | Bind Router.Push in the handler |
 | Buttons ignore clicks | No EventSystem | Add Event System to the scene |
 | PushNamed not found | No Name in SusRouteConfig | Set Name = "..." |
 | KeepAlive does not cache | KeepAlive not true | Set KeepAlive = true |

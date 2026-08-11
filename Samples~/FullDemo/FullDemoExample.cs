@@ -1,14 +1,13 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 using Sharq.Core;
 using Sharq.Router;
-using Sharq.Kit;
-using TabItem = SusTabs.TabItem;
 
 /// <summary>
 /// Full Demo — ALL SusRouter features in one sample.
-/// - Sidebar with SusTabs(vertical) navigation (Push — history works)
+/// - Sidebar with vertical UITK tab buttons (Push — history works)
 /// - 5 screens: Dashboard, Users, UserDetail, Settings, About
 /// - KeepAlive, guards, modals, transitions, named routes, nested routes
 /// - Theming via SusThemeService (reactive, whole UI responds)
@@ -20,15 +19,15 @@ public class FullDemoExample : MonoBehaviour
     [SerializeField] private UIDocument _uiDocument;
 
     private SusRouter _router;
-    private SusChip _statusChip;
-    private SusChip _statsChip;
-    private SusToggle _themeToggle;
+    private Label _statusChip;
+    private Label _statsChip;
+    private Toggle _themeToggle;
     private VisualElement _root;
 
     private void OnEnable()
     {
         try { BuildUI(); }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
             Debug.LogError($"[FullDemo] OnEnable failed: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
         }
@@ -44,8 +43,6 @@ public class FullDemoExample : MonoBehaviour
 
         _root = doc.rootVisualElement;
 
-        // Unified bootstrap: token cascade + companion _global USS, content built in
-        // Configure, then Dark theme applied LAST so overlays created during mount inherit it.
         SusApp.Create(_root)
               .UseTheme(SusTheme.Dark)
               .UseCustomStyles("SusRuntime/_global")
@@ -63,10 +60,6 @@ public class FullDemoExample : MonoBehaviour
         mainRow.style.flexDirection = FlexDirection.Row;
         screens.Add(mainRow);
 
-        // ════════════════════════════════════════════════════════════════
-        //  Sidebar
-        // ════════════════════════════════════════════════════════════════
-
         var sidebar = new VisualElement();
         sidebar.AddToClassList("demo-sidebar");
         sidebar.style.width = 200;
@@ -74,7 +67,6 @@ public class FullDemoExample : MonoBehaviour
         sidebar.style.paddingTop = 16;
         sidebar.style.paddingLeft = 12;
         sidebar.style.paddingRight = 12;
-        // Sidebar bg adapts to theme
         ApplyThemeBg(sidebar, "#0f0f14", "#f0f0f5");
 
         var logo = new Label("SUS Demo");
@@ -85,21 +77,15 @@ public class FullDemoExample : MonoBehaviour
         ApplyThemeFg(logo, "#e6e6f0", "#1a1b23");
         sidebar.Add(logo);
 
-        // SusTabs (vertical) navigation — use icons from the registry
-        var navTabs = new SusTabs();
-        navTabs.Direction.Value = "vertical";
-        navTabs.Align.Value = "start";
-        navTabs.Items.Value = new List<TabItem>
+        var navTabs = new SimpleTabBar(new[]
         {
-            new() { Title = "Dashboard", Value = "/dashboard", Icon = "columns" },
-            new() { Title = "Users",     Value = "/users",     Icon = "users"   },
-            new() { Title = "Settings",  Value = "/settings",  Icon = "settings"},
-            new() { Title = "About",     Value = "/about",     Icon = "info"    },
-        };
-        navTabs.Model.Value = "/dashboard";
-        sidebar.Add(navTabs);
+            ("Dashboard", "/dashboard"),
+            ("Users", "/users"),
+            ("Settings", "/settings"),
+            ("About", "/about"),
+        }, "/dashboard", vertical: true);
+        sidebar.Add(navTabs.Root);
 
-        // Actions
         var actionSection = new Label("Actions");
         actionSection.style.fontSize = 11;
         actionSection.style.marginTop = 24;
@@ -107,17 +93,14 @@ public class FullDemoExample : MonoBehaviour
         ApplyThemeFg(actionSection, "#606070", "#808090");
         sidebar.Add(actionSection);
 
-        var modalBtn = new SusButton();
-        modalBtn.Text.Value = "Open Modal";
-        modalBtn.Variant.Value = "primary";
-        modalBtn.RegisterCallback<ClickEvent>(_ =>
+        var modalBtn = MakeButton("Open Modal");
+        modalBtn.clicked += () =>
         {
             _router.ModalService?.Show(typeof(AboutDialog),
                 new() { ["title"] = "About", ["message"] = "SusRouter Full Demo v0.2" });
-        });
+        };
         sidebar.Add(modalBtn);
 
-        // Theme toggle
         var themeLabel = new Label("Theme");
         themeLabel.style.fontSize = 11;
         themeLabel.style.marginTop = 16;
@@ -125,16 +108,13 @@ public class FullDemoExample : MonoBehaviour
         ApplyThemeFg(themeLabel, "#606070", "#808090");
         sidebar.Add(themeLabel);
 
-        _themeToggle = new SusToggle();
-        _themeToggle.Label.Value = "Dark";
-        _themeToggle.Model.Value = true;
-        _themeToggle.OnChange += isDark =>
+        _themeToggle = new Toggle("Dark") { value = true };
+        _themeToggle.RegisterValueChangedCallback(evt =>
         {
-            SusThemeService.Instance.SetTheme(_root, isDark ? SusTheme.Dark : SusTheme.Light);
-        };
+            SusThemeService.Instance.SetTheme(_root, evt.newValue ? SusTheme.Dark : SusTheme.Light);
+        });
         sidebar.Add(_themeToggle);
 
-        // Stats
         var statsLabel = new Label("Stats");
         statsLabel.style.fontSize = 11;
         statsLabel.style.marginTop = 16;
@@ -142,47 +122,38 @@ public class FullDemoExample : MonoBehaviour
         ApplyThemeFg(statsLabel, "#606070", "#808090");
         sidebar.Add(statsLabel);
 
-        _statsChip = new SusChip();
-        _statsChip.Label.Value = "Routes: 5  Guards: 2";
+        _statsChip = MakeChip("Routes: 5  Guards: 2");
         sidebar.Add(_statsChip);
 
-        _statusChip = new SusChip();
-        _statusChip.Label.Value = "/dashboard";
+        _statusChip = MakeChip("/dashboard");
         _statusChip.style.marginTop = 4;
         sidebar.Add(_statusChip);
 
-        // Back / Forward — work thanks to Push navigation
         var backFwdRow = new VisualElement();
         backFwdRow.style.flexDirection = FlexDirection.Row;
         backFwdRow.style.marginTop = 12;
 
-        var backBtn = new SusButton();
-        backBtn.Text.Value = "←";
-        backBtn.RegisterCallback<ClickEvent>(_ =>
+        var backBtn = MakeButton("←");
+        backBtn.clicked += () =>
         {
             var result = _router.Back();
             Debug.Log($"[FullDemo] Back result: {result}");
             UpdateChip();
-        });
+        };
         backFwdRow.Add(backBtn);
 
-        var fwdBtn = new SusButton();
-        fwdBtn.Text.Value = "→";
+        var fwdBtn = MakeButton("→");
         fwdBtn.style.marginLeft = 4;
-        fwdBtn.RegisterCallback<ClickEvent>(_ =>
+        fwdBtn.clicked += () =>
         {
             var result = _router.Forward();
             Debug.Log($"[FullDemo] Forward result: {result}");
             UpdateChip();
-        });
+        };
         backFwdRow.Add(fwdBtn);
 
         sidebar.Add(backFwdRow);
         mainRow.Add(sidebar);
-
-        // ════════════════════════════════════════════════════════════════
-        //  Content area — ScrollView so content is not clipped
-        // ════════════════════════════════════════════════════════════════
 
         var contentScroll = new ScrollView();
         contentScroll.style.flexGrow = 1f;
@@ -194,29 +165,22 @@ public class FullDemoExample : MonoBehaviour
         content.name = "router-content";
         contentScroll.Add(content);
 
-        // ════════════════════════════════════════════════════════════════
-        //  Router setup
-        // ════════════════════════════════════════════════════════════════
-
         var overlayHost = SusBootstrap.GetOrCreateOverlay(_root);
 
         _router = new SusRouter();
         _router.Init(overlayHost);
 
-        // beforeEach guard
         _router.BeforeEach((from, to) =>
         {
             Debug.Log($"[FullDemo beforeEach] {from.FullPath} → {to.FullPath}");
             return true;
         });
 
-        // afterEach hook
         _router.AfterEach((from, to) =>
         {
             Debug.Log($"[FullDemo afterEach] Done: {to.FullPath}");
         });
 
-        // Routes
         _router.Register("/dashboard", typeof(DashboardScreen), new SusRouteConfig
         {
             KeepAlive = true,
@@ -243,17 +207,16 @@ public class FullDemoExample : MonoBehaviour
 
         _router.Mount(content, "/dashboard");
 
-        // Tabs → Push (adds to history, Back/Forward work)
-        navTabs.OnTabChanged += path =>
+        navTabs.OnChanged += path =>
         {
             _router.Push(path);
-            navTabs.Model.Value = _router.CurrentRoute.Value?.Record?.Path ?? "/dashboard";
+            navTabs.SetValue(_router.CurrentRoute.Value?.Record?.Path ?? "/dashboard");
         };
 
         _router.CurrentRoute.Changed += (o, n) =>
         {
             if (n?.Record?.Path != null)
-                navTabs.Model.Value = n.Record.Path;
+                navTabs.SetValue(n.Record.Path);
             UpdateChip();
         };
 
@@ -264,21 +227,16 @@ public class FullDemoExample : MonoBehaviour
     private void UpdateChip()
     {
         var route = _router?.CurrentRoute?.Value;
-        _statusChip.Label.Value = route?.FullPath ?? "/";
-        _statsChip.Label.Value = $"Routes: {_router?.RouteCount ?? 0}  " +
+        _statusChip.text = route?.FullPath ?? "/";
+        _statsChip.text = $"Routes: {_router?.RouteCount ?? 0}  " +
             $"History: {_router?.History.Count ?? 0}  " +
             $"CanBack: {(_router?.CanGoBack ?? false)}";
     }
 
-    // ════════════════════════════════════════════════════════════════
-    //  Theme-aware helpers — subscribe to SusThemeService.Current
-    // ════════════════════════════════════════════════════════════════
-
     private void ApplyThemeBg(VisualElement el, string darkHex, string lightHex)
     {
-        Color dark, light;
-        ColorUtility.TryParseHtmlString(darkHex, out dark);
-        ColorUtility.TryParseHtmlString(lightHex, out light);
+        ColorUtility.TryParseHtmlString(darkHex, out var dark);
+        ColorUtility.TryParseHtmlString(lightHex, out var light);
         el.style.backgroundColor = SusThemeService.Current.Value == SusTheme.Dark ? dark : light;
         SusThemeService.Current.Changed += (_, next) =>
             el.style.backgroundColor = next == SusTheme.Dark ? dark : light;
@@ -286,17 +244,83 @@ public class FullDemoExample : MonoBehaviour
 
     private void ApplyThemeFg(VisualElement el, string darkHex, string lightHex)
     {
-        Color dark, light;
-        ColorUtility.TryParseHtmlString(darkHex, out dark);
-        ColorUtility.TryParseHtmlString(lightHex, out light);
+        ColorUtility.TryParseHtmlString(darkHex, out var dark);
+        ColorUtility.TryParseHtmlString(lightHex, out var light);
         el.style.color = SusThemeService.Current.Value == SusTheme.Dark ? dark : light;
         SusThemeService.Current.Changed += (_, next) =>
             el.style.color = next == SusTheme.Dark ? dark : light;
     }
 
-    // ════════════════════════════════════════════════════════════════
-    //  UserDetailGuard
-    // ════════════════════════════════════════════════════════════════
+    internal static Button MakeButton(string text)
+    {
+        var b = new Button { text = text };
+        b.style.marginRight = 4;
+        return b;
+    }
+
+    internal static Label MakeChip(string text)
+    {
+        var l = new Label(text);
+        l.style.backgroundColor = new Color(0.25f, 0.25f, 0.32f);
+        l.style.color = Color.white;
+        l.style.fontSize = 11;
+        l.style.paddingLeft = 8;
+        l.style.paddingRight = 8;
+        l.style.paddingTop = 4;
+        l.style.paddingBottom = 4;
+        l.style.whiteSpace = WhiteSpace.Normal;
+        return l;
+    }
+
+    internal sealed class SimpleTabBar
+    {
+        public VisualElement Root { get; }
+        public event Action<string> OnChanged;
+        private readonly Dictionary<string, Button> _buttons = new();
+        private string _value;
+
+        public SimpleTabBar(IEnumerable<(string title, string value)> items, string initial,
+            bool vertical = false)
+        {
+            Root = new VisualElement();
+            Root.style.flexDirection = vertical ? FlexDirection.Column : FlexDirection.Row;
+            Root.style.flexGrow = 1f;
+            _value = initial;
+            foreach (var (title, value) in items)
+            {
+                var path = value;
+                var btn = new Button(() =>
+                {
+                    SetValue(path);
+                    OnChanged?.Invoke(path);
+                }) { text = title };
+                btn.style.marginRight = vertical ? 0 : 4;
+                btn.style.marginBottom = vertical ? 4 : 0;
+                btn.style.width = vertical ? Length.Percent(100) : StyleKeyword.Auto;
+                _buttons[path] = btn;
+                Root.Add(btn);
+            }
+            RefreshStyles();
+        }
+
+        public void SetValue(string path)
+        {
+            _value = path;
+            RefreshStyles();
+        }
+
+        private void RefreshStyles()
+        {
+            foreach (var kv in _buttons)
+            {
+                var on = kv.Key == _value;
+                kv.Value.style.backgroundColor = on
+                    ? new Color(0.25f, 0.45f, 0.75f)
+                    : new Color(0.18f, 0.18f, 0.22f);
+                kv.Value.style.color = Color.white;
+            }
+        }
+    }
 
     private class UserDetailGuard : ISusRouteGuard
     {
@@ -312,10 +336,6 @@ public class FullDemoExample : MonoBehaviour
             return true;
         }
     }
-
-    // ════════════════════════════════════════════════════════════════
-    //  Screens — theme-aware (colors via SusThemeService.Current)
-    // ════════════════════════════════════════════════════════════════
 
     private static Color ThemeBg => SusThemeService.Current.Value == SusTheme.Dark
         ? new Color(0.12f, 0.13f, 0.18f)
@@ -359,7 +379,6 @@ public class FullDemoExample : MonoBehaviour
             SusThemeService.Current.Changed += (_, __) => title.style.color = ThemeText;
             Add(title);
 
-            // Stats cards
             var cardsRow = new VisualElement();
             cardsRow.style.flexDirection = FlexDirection.Row;
 
@@ -369,8 +388,7 @@ public class FullDemoExample : MonoBehaviour
 
             Add(cardsRow);
 
-            var statusChip = new SusChip();
-            statusChip.Label.Value = "KeepAlive active";
+            var statusChip = MakeChip("KeepAlive active");
             statusChip.style.marginTop = 16;
             Add(statusChip);
         }
@@ -432,8 +450,7 @@ public class FullDemoExample : MonoBehaviour
             var users = new[] { "Alice (ID:1)", "Bob (ID:2)", "Charlie (ID:42)" };
             foreach (var user in users)
             {
-                var chip = new SusChip();
-                chip.Label.Value = user;
+                var chip = MakeChip(user);
                 chip.style.marginBottom = 8;
                 chip.RegisterCallback<ClickEvent>(_ =>
                 {
@@ -443,8 +460,7 @@ public class FullDemoExample : MonoBehaviour
                 Add(chip);
             }
 
-            var keepAliveChip = new SusChip();
-            keepAliveChip.Label.Value = "KeepAlive active";
+            var keepAliveChip = MakeChip("KeepAlive active");
             keepAliveChip.style.marginTop = 16;
             Add(keepAliveChip);
         }
@@ -474,38 +490,25 @@ public class FullDemoExample : MonoBehaviour
             title.style.marginBottom = 16;
             Add(title);
 
-            var nameField = new SusTextfield();
-            nameField.Label.Value = "Name";
-            nameField.Model.Value = $"User {id}";
+            var nameField = new TextField("Name") { value = $"User {id}" };
             nameField.style.marginBottom = 8;
             Add(nameField);
 
-            var roleField = new SusTextfield();
-            roleField.Label.Value = "Role";
-            roleField.Model.Value = "Member";
+            var roleField = new TextField("Role") { value = "Member" };
             roleField.style.marginBottom = 8;
             Add(roleField);
 
-            var activeToggle = new SusToggle();
-            activeToggle.Label.Value = "Active";
-            activeToggle.Model.Value = true;
+            var activeToggle = new Toggle("Active") { value = true };
             activeToggle.style.marginBottom = 16;
             Add(activeToggle);
 
-            var saveBtn = new SusButton();
-            saveBtn.Text.Value = "Save";
-            saveBtn.Variant.Value = "success";
-            saveBtn.RegisterCallback<ClickEvent>(_ =>
-            {
-                Debug.Log($"[UserDetail] Saved user #{id}");
-            });
+            var saveBtn = MakeButton("Save");
+            saveBtn.clicked += () => Debug.Log($"[UserDetail] Saved user #{id}");
             Add(saveBtn);
 
-            var backBtn = new SusButton();
-            backBtn.Text.Value = "Back to Users";
-            backBtn.Variant.Value = "secondary";
+            var backBtn = MakeButton("Back to Users");
             backBtn.style.marginTop = 8;
-            backBtn.RegisterCallback<ClickEvent>(_ => Router.Push("/users"));
+            backBtn.clicked += () => Router.Push("/users");
             Add(backBtn);
         }
 
@@ -540,22 +543,15 @@ public class FullDemoExample : MonoBehaviour
             SusThemeService.Current.Changed += (_, __) => title.style.color = ThemeText;
             Add(title);
 
-            var darkToggle = new SusToggle();
-            darkToggle.Label.Value = "Dark theme";
-            darkToggle.Model.Value = true;
+            var darkToggle = new Toggle("Dark theme") { value = true };
             darkToggle.style.marginBottom = 8;
             Add(darkToggle);
 
-            var notifToggle = new SusToggle();
-            notifToggle.Label.Value = "Notifications";
-            notifToggle.Model.Value = true;
+            var notifToggle = new Toggle("Notifications") { value = true };
             notifToggle.style.marginBottom = 8;
             Add(notifToggle);
 
-            var soundToggle = new SusToggle();
-            soundToggle.Label.Value = "Sound effects";
-            soundToggle.Model.Value = true;
-            Add(soundToggle);
+            Add(new Toggle("Sound effects") { value = true });
         }
 
         protected override bool OnBeforeEnter(SusRoute from)
@@ -582,9 +578,7 @@ public class FullDemoExample : MonoBehaviour
             SusThemeService.Current.Changed += (_, __) => title.style.color = ThemeText;
             Add(title);
 
-            var verChip = new SusChip();
-            verChip.Label.Value = "SusRouter v0.2.17";
-            Add(verChip);
+            Add(MakeChip("SusRouter v0.2.17"));
 
             var aboutText = new Label(
                 "Vue Router-like navigation for Unity UI Toolkit.\n\n" +
@@ -600,11 +594,7 @@ public class FullDemoExample : MonoBehaviour
         }
     }
 
-    // ════════════════════════════════════════════════════════════════
-    //  Modal dialog — Props available only in Shown(), NOT in Build()
-    // ════════════════════════════════════════════════════════════════
-
-    internal class AboutDialog : Sharq.Router.SusRouterModal
+    internal class AboutDialog : SusRouterModal
     {
         private Label _titleLabel;
         private Label _msgLabel;
@@ -619,7 +609,6 @@ public class FullDemoExample : MonoBehaviour
             style.justifyContent = Justify.Center;
             style.flexDirection = FlexDirection.Column;
 
-            // Create placeholders — Props still null, fill in Shown()
             _titleLabel = new Label("...");
             _titleLabel.style.fontSize = 20;
             _titleLabel.style.color = Color.white;
@@ -634,16 +623,13 @@ public class FullDemoExample : MonoBehaviour
             _msgLabel.style.marginBottom = 20;
             Add(_msgLabel);
 
-            var closeBtn = new SusButton();
-            closeBtn.Text.Value = "Close";
-            closeBtn.Variant.Value = "primary";
-            closeBtn.RegisterCallback<ClickEvent>(_ => Dismiss());
+            var closeBtn = MakeButton("Close");
+            closeBtn.clicked += () => Dismiss();
             Add(closeBtn);
         }
 
-        protected internal override void Shown()
+        protected override void Shown()
         {
-            // Props available ONLY here — Build() runs in the constructor BEFORE Props are assigned
             var title = Props.TryGetValue("title", out var t) ? t?.ToString() : "About";
             var msg = Props.TryGetValue("message", out var m) ? m?.ToString() : "";
             _titleLabel.text = title;

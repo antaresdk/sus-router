@@ -1,10 +1,9 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 using Sharq.Core;
 using Sharq.Router;
-using Sharq.Kit;
-using TabItem = SusTabs.TabItem;
 
 /// <summary>
 /// KeepAlive — screen caching.
@@ -17,12 +16,12 @@ public class KeepAliveExample : MonoBehaviour
     [SerializeField] private UIDocument _uiDocument;
 
     private SusRouter _router;
-    private SusTabs _navTabs;
+    private SimpleTabBar _navTabs;
 
     private void OnEnable()
     {
         try { BuildUI(); }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
             Debug.LogError($"[KeepAlive] OnEnable failed: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
         }
@@ -40,8 +39,6 @@ public class KeepAliveExample : MonoBehaviour
         root.style.flexGrow = 1f;
         root.style.backgroundColor = new Color(0.12f, 0.13f, 0.16f);
 
-        // Unified bootstrap: EventSystem + token cascade, then BuildContent (nav + router
-        // mount + overlay), then theme applied LAST so the OverlayHost inherits it.
         SusApp.Create(root)
               .UseTheme(SusTheme.Dark)
               .Configure(BuildContent)
@@ -53,51 +50,96 @@ public class KeepAliveExample : MonoBehaviour
         var screens = root.Q<ScreenHost>(name: ScreenHost.ScreenHostName) ?? root;
         screens.style.flexGrow = 1f;
 
-        // ── Tabs ──
-        _navTabs = new SusTabs();
-        _navTabs.Items.Value = new List<TabItem>
+        _navTabs = new SimpleTabBar(new[]
         {
-            new() { Title = "[K] Counter", Value = "/counter" },
-            new() { Title = "[K] Form", Value = "/form" },
-            new() { Title = "Settings", Value = "/settings" },
-        };
-        _navTabs.Model.Value = "/counter";
-        _navTabs.style.marginBottom = 8;
-        screens.Add(_navTabs);
+            ("[K] Counter", "/counter"),
+            ("[K] Form", "/form"),
+            ("Settings", "/settings"),
+        }, "/counter");
+        _navTabs.Root.style.marginBottom = 8;
+        screens.Add(_navTabs.Root);
 
         var routeSlot = new VisualElement { name = "route-slot" };
         routeSlot.style.flexGrow = 1f;
         screens.Add(routeSlot);
 
-        // ── Router ──
         _router = new SusRouter();
         _router.Init(SusBootstrap.GetOrCreateOverlay(root));
 
         _router.Register("/counter", typeof(CounterScreen), new SusRouteConfig { KeepAlive = true });
         _router.Register("/form", typeof(FormScreen), new SusRouteConfig { KeepAlive = true });
-        _router.Register("/settings", typeof(SettingsScreen)); // NO KeepAlive
+        _router.Register("/settings", typeof(SettingsScreen));
 
         _router.Mount(routeSlot, "/counter");
-        // Mount() already calls Init() internally (guarded). No need for explicit Init().
 
-        _navTabs.OnTabChanged += path =>
+        _navTabs.OnChanged += path =>
         {
             _router.Push(path);
-            _navTabs.Model.Value = _router.CurrentRoute.Value?.Record?.Path ?? "/counter";
+            _navTabs.SetValue(_router.CurrentRoute.Value?.Record?.Path ?? "/counter");
         };
 
         _router.CurrentRoute.Changed += (o, n) =>
         {
             if (n?.Record?.Path != null)
-                _navTabs.Model.Value = n.Record.Path;
+                _navTabs.SetValue(n.Record.Path);
         };
 
         Debug.Log("[KeepAlive] Ready. Switch tabs to test KeepAlive.");
     }
 
-    // ════════════════════════════════════════════════════════════════
-    //  Screens
-    // ════════════════════════════════════════════════════════════════
+    internal static Button MakeButton(string text)
+    {
+        var b = new Button { text = text };
+        b.style.marginRight = 4;
+        return b;
+    }
+
+    internal sealed class SimpleTabBar
+    {
+        public VisualElement Root { get; }
+        public event Action<string> OnChanged;
+        private readonly Dictionary<string, Button> _buttons = new();
+        private string _value;
+
+        public SimpleTabBar(IEnumerable<(string title, string value)> items, string initial)
+        {
+            Root = new VisualElement();
+            Root.style.flexDirection = FlexDirection.Row;
+            Root.style.flexGrow = 1f;
+            _value = initial;
+            foreach (var (title, value) in items)
+            {
+                var path = value;
+                var btn = new Button(() =>
+                {
+                    SetValue(path);
+                    OnChanged?.Invoke(path);
+                }) { text = title };
+                btn.style.marginRight = 4;
+                _buttons[path] = btn;
+                Root.Add(btn);
+            }
+            RefreshStyles();
+        }
+
+        public void SetValue(string path)
+        {
+            _value = path;
+            RefreshStyles();
+        }
+
+        private void RefreshStyles()
+        {
+            foreach (var kv in _buttons)
+            {
+                var on = kv.Key == _value;
+                kv.Value.style.backgroundColor = on
+                    ? new Color(0.25f, 0.45f, 0.75f)
+                    : new Color(0.18f, 0.18f, 0.22f);
+                kv.Value.style.color = Color.white;
+            }
+        }
+    }
 
     internal class CounterScreen : SusScreen
     {
@@ -119,17 +161,13 @@ public class KeepAliveExample : MonoBehaviour
             _countLabel.style.marginBottom = 16;
             Add(_countLabel);
 
-            var incBtn = new SusButton();
-            incBtn.Text.Value = "+1";
-            incBtn.Variant.Value = "primary";
-            incBtn.RegisterCallback<ClickEvent>(_ => { _count++; _countLabel.text = $"Count: {_count}"; });
+            var incBtn = MakeButton("+1");
+            incBtn.clicked += () => { _count++; _countLabel.text = $"Count: {_count}"; };
             Add(incBtn);
 
-            var resetBtn = new SusButton();
-            resetBtn.Text.Value = "Reset";
-            resetBtn.Variant.Value = "secondary";
+            var resetBtn = MakeButton("Reset");
             resetBtn.style.marginTop = 8;
-            resetBtn.RegisterCallback<ClickEvent>(_ => { _count = 0; _countLabel.text = "Count: 0"; });
+            resetBtn.clicked += () => { _count = 0; _countLabel.text = "Count: 0"; };
             Add(resetBtn);
 
             var hint = new Label("Switch to Form tab and back — count stays!");
@@ -158,14 +196,11 @@ public class KeepAliveExample : MonoBehaviour
 
             Add(new Label("Form (KeepAlive)") { style = { fontSize = 24, color = Color.cyan, marginBottom = 16 } });
 
-            var nameField = new SusTextfield();
-            nameField.Label.Value = "Your Name";
+            var nameField = new TextField("Your Name");
             nameField.style.marginBottom = 8;
             Add(nameField);
 
-            var emailField = new SusTextfield();
-            emailField.Label.Value = "Email";
-            Add(emailField);
+            Add(new TextField("Email"));
 
             var hint = new Label("Type something, switch tab, come back — text preserved!");
             hint.style.color = new Color(0.5f, 0.9f, 0.5f);
@@ -192,14 +227,11 @@ public class KeepAliveExample : MonoBehaviour
 
             Add(new Label("Settings (NO KeepAlive)") { style = { fontSize = 24, color = Color.magenta, marginBottom = 16 } });
 
-            var darkToggle = new SusToggle();
-            darkToggle.Label.Value = "Dark mode";
+            var darkToggle = new Toggle("Dark mode");
             darkToggle.style.marginBottom = 8;
             Add(darkToggle);
 
-            var notifToggle = new SusToggle();
-            notifToggle.Label.Value = "Notifications";
-            Add(notifToggle);
+            Add(new Toggle("Notifications"));
 
             var hint = new Label("Switch tab and come back — state RESETS!");
             hint.style.color = new Color(1f, 0.4f, 0.4f);

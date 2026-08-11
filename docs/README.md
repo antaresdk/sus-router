@@ -76,6 +76,8 @@ router.Mount(root, "/home");
 
 ## Samples (Samples~/)
 
+Chrome uses plain Unity UI Toolkit (`Button` / `Label` / `TextField` / `Toggle`). No downstream UI package is required to run the samples.
+
 | # | Sample | Router features |
 |---|---|---|
 | 1 | [BasicRouting](../Samples~/BasicRouting/) | Push, Replace, Back |

@@ -1,10 +1,9 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 using Sharq.Core;
 using Sharq.Router;
-using Sharq.Kit;
-using TabItem = SusTabs.TabItem;
 
 /// <summary>
 /// Nested & Named Routes — nested routes, PushNamed, params, query, alias, redirect.
@@ -16,12 +15,12 @@ public class AdvancedRoutingExample : MonoBehaviour
     [SerializeField] private UIDocument _uiDocument;
 
     private SusRouter _router;
-    private SusTabs _navTabs;
+    private SimpleTabBar _navTabs;
 
     private void OnEnable()
     {
         try { BuildUI(); }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
             Debug.LogError($"[Nested] OnEnable failed: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
         }
@@ -39,8 +38,6 @@ public class AdvancedRoutingExample : MonoBehaviour
         root.style.flexGrow = 1f;
         root.style.backgroundColor = new Color(0.12f, 0.13f, 0.16f);
 
-        // Unified bootstrap: EventSystem + token cascade, then BuildContent (nav + router
-        // mount + overlay), then theme applied LAST so the OverlayHost inherits it.
         SusApp.Create(root)
               .UseTheme(SusTheme.Dark)
               .Configure(BuildContent)
@@ -52,7 +49,6 @@ public class AdvancedRoutingExample : MonoBehaviour
         var screens = root.Q<ScreenHost>(name: ScreenHost.ScreenHostName) ?? root;
         screens.style.flexGrow = 1f;
 
-        // ── Navbar ──
         var navBar = new VisualElement();
         navBar.style.flexDirection = FlexDirection.Row;
         navBar.style.alignItems = Align.Center;
@@ -62,25 +58,19 @@ public class AdvancedRoutingExample : MonoBehaviour
         navBar.style.paddingRight = 16;
         navBar.style.backgroundColor = new Color(0.08f, 0.08f, 0.10f);
 
-        _navTabs = new SusTabs();
-        _navTabs.Items.Value = new List<TabItem>
+        _navTabs = new SimpleTabBar(new[]
         {
-            new() { Title = "Menu", Value = "/main-menu" },
-            new() { Title = "Battle#42", Value = "/battle/42" },
-            new() { Title = "Settings", Value = "/settings" },
-            new() { Title = "Search", Value = "/search" },
-            new() { Title = "Lazy", Value = "/lazy" },
-        };
-        _navTabs.Model.Value = "/main-menu";
-        navBar.Add(_navTabs);
+            ("Menu", "/main-menu"),
+            ("Battle#42", "/battle/42"),
+            ("Settings", "/settings"),
+            ("Search", "/search"),
+            ("Lazy", "/lazy"),
+        }, "/main-menu");
+        navBar.Add(_navTabs.Root);
 
-        var backBtn = new SusButton();
-        backBtn.Text.Value = "<- Back";
+        var backBtn = MakeButton("<- Back");
         backBtn.style.marginLeft = 8;
-        backBtn.RegisterCallback<ClickEvent>(_ =>
-        {
-            Debug.Log($"[Router] Back → {_router.Back()}");
-        });
+        backBtn.clicked += () => Debug.Log($"[Router] Back → {_router.Back()}");
         navBar.Add(backBtn);
 
         screens.Add(navBar);
@@ -89,30 +79,25 @@ public class AdvancedRoutingExample : MonoBehaviour
         routeSlot.style.flexGrow = 1f;
         screens.Add(routeSlot);
 
-        // ── Router ──
         _router = new SusRouter();
         _router.Init(SusBootstrap.GetOrCreateOverlay(root));
 
-        // Named route
         _router.Register("/battle/:id", typeof(BattleScreen), new SusRouteConfig
         {
             Name = "battle",
             Transition = SusRouteTransition.SlideLeft()
         });
 
-        // Alias
         _router.Register("/main-menu", typeof(MenuScreen), new SusRouteConfig
         {
             Alias = new List<string> { "/menu" }
         });
 
-        // Redirect
         _router.Register("/old-menu", typeof(MenuScreen), new SusRouteConfig
         {
             Redirect = "/main-menu"
         });
 
-        // Nested
         _router.Register("/settings", typeof(SettingsScreen), new SusRouteConfig
         {
             Name = "settings",
@@ -123,10 +108,8 @@ public class AdvancedRoutingExample : MonoBehaviour
             }
         });
 
-        // Query params
         _router.Register("/search", typeof(SearchScreen));
 
-        // Lazy loading
         _router.Register("/lazy", null, new SusRouteConfig
         {
             LazyFactory = () =>
@@ -143,9 +126,8 @@ public class AdvancedRoutingExample : MonoBehaviour
         });
 
         _router.Mount(routeSlot, "/main-menu");
-        // Mount() already calls Init() internally (guarded). No need for explicit Init().
 
-        _navTabs.OnTabChanged += path =>
+        _navTabs.OnChanged += path =>
         {
             if (path == "/battle/42")
                 _router.PushNamed("battle", new() { ["id"] = "42" });
@@ -153,13 +135,13 @@ public class AdvancedRoutingExample : MonoBehaviour
                 _router.PushNamed("settings");
             else
                 _router.Push(path);
-            _navTabs.Model.Value = _router.CurrentRoute.Value?.Record?.Path ?? "/main-menu";
+            _navTabs.SetValue(_router.CurrentRoute.Value?.Record?.Path ?? "/main-menu");
         };
 
         _router.CurrentRoute.Changed += (o, n) =>
         {
             if (n?.Record?.Path != null)
-                _navTabs.Model.Value = n.Record.Path;
+                _navTabs.SetValue(n.Record.Path);
 
             if (n?.Query?.Count > 0)
             {
@@ -171,9 +153,73 @@ public class AdvancedRoutingExample : MonoBehaviour
         Debug.Log("[Nested] Ready. Tab navigation with named/nested/query/lazy routes.");
     }
 
-    // ════════════════════════════════════════════════════════════════
-    //  Screens
-    // ════════════════════════════════════════════════════════════════
+    internal static Button MakeButton(string text)
+    {
+        var b = new Button { text = text };
+        b.style.marginRight = 4;
+        return b;
+    }
+
+    internal static Label MakeChip(string text)
+    {
+        var l = new Label(text);
+        l.style.backgroundColor = new Color(0.25f, 0.25f, 0.32f);
+        l.style.color = Color.white;
+        l.style.fontSize = 12;
+        l.style.paddingLeft = 8;
+        l.style.paddingRight = 8;
+        l.style.paddingTop = 4;
+        l.style.paddingBottom = 4;
+        l.style.marginBottom = 8;
+        return l;
+    }
+
+    internal sealed class SimpleTabBar
+    {
+        public VisualElement Root { get; }
+        public event Action<string> OnChanged;
+        private readonly Dictionary<string, Button> _buttons = new();
+        private string _value;
+
+        public SimpleTabBar(IEnumerable<(string title, string value)> items, string initial)
+        {
+            Root = new VisualElement();
+            Root.style.flexDirection = FlexDirection.Row;
+            Root.style.flexGrow = 1f;
+            _value = initial;
+            foreach (var (title, value) in items)
+            {
+                var path = value;
+                var btn = new Button(() =>
+                {
+                    SetValue(path);
+                    OnChanged?.Invoke(path);
+                }) { text = title };
+                btn.style.marginRight = 4;
+                _buttons[path] = btn;
+                Root.Add(btn);
+            }
+            RefreshStyles();
+        }
+
+        public void SetValue(string path)
+        {
+            _value = path;
+            RefreshStyles();
+        }
+
+        private void RefreshStyles()
+        {
+            foreach (var kv in _buttons)
+            {
+                var on = kv.Key == _value;
+                kv.Value.style.backgroundColor = on
+                    ? new Color(0.25f, 0.45f, 0.75f)
+                    : new Color(0.18f, 0.18f, 0.22f);
+                kv.Value.style.color = Color.white;
+            }
+        }
+    }
 
     internal class MenuScreen : SusScreen
     {
@@ -207,20 +253,17 @@ public class AdvancedRoutingExample : MonoBehaviour
 
             Add(new Label("Settings") { style = { fontSize = 28, color = Color.white, marginBottom = 16 } });
 
-            // Nested child tabs
-            var childTabs = new SusTabs();
-            childTabs.Items.Value = new List<TabItem>
+            var childTabs = new SimpleTabBar(new[]
             {
-                new() { Title = "Profile", Value = "/settings/profile" },
-                new() { Title = "Privacy", Value = "/settings/privacy" },
-            };
-            childTabs.Model.Value = "/settings/profile";
-            childTabs.OnTabChanged += p =>
+                ("Profile", "/settings/profile"),
+                ("Privacy", "/settings/privacy"),
+            }, "/settings/profile");
+            childTabs.OnChanged += p =>
             {
                 Router.Push(p);
-                childTabs.Model.Value = Router.CurrentRoute.Value?.Record?.Path ?? "/settings/profile";
+                childTabs.SetValue(Router.CurrentRoute.Value?.Record?.Path ?? "/settings/profile");
             };
-            Add(childTabs);
+            Add(childTabs.Root);
 
             var childLabel = new Label("(nested child route content here)");
             childLabel.style.color = new Color(0.6f, 0.6f, 0.7f);
@@ -245,12 +288,9 @@ public class AdvancedRoutingExample : MonoBehaviour
             Add(new Label($"Battle #{id}") { style = { fontSize = 24, color = Color.red, marginBottom = 16 } });
             Add(new Label($"mode: {mode}") { style = { color = new Color(0.6f, 0.6f, 0.7f), fontSize = 16 } });
 
-            // PushNamed example button
-            var namedBtn = new SusButton();
-            namedBtn.Text.Value = "PushNamed(\"battle\", id=99)";
-            namedBtn.Variant.Value = "primary";
-            namedBtn.RegisterCallback<ClickEvent>(_ =>
-                Router.PushNamed("battle", new() { ["id"] = "99" }));
+            var namedBtn = MakeButton("PushNamed(\"battle\", id=99)");
+            namedBtn.clicked += () =>
+                Router.PushNamed("battle", new() { ["id"] = "99" });
             namedBtn.style.marginTop = 16;
             Add(namedBtn);
         }
@@ -276,20 +316,12 @@ public class AdvancedRoutingExample : MonoBehaviour
             var q = GetQuery("q", "(none)");
             var page = GetQuery("page", "(none)");
 
-            var qChip = new SusChip();
-            qChip.Label.Value = $"q={q}";
-            qChip.style.marginBottom = 8;
-            Add(qChip);
+            Add(MakeChip($"q={q}"));
+            Add(MakeChip($"page={page}"));
 
-            var pageChip = new SusChip();
-            pageChip.Label.Value = $"page={page}";
-            Add(pageChip);
-
-            var searchBtn = new SusButton();
-            searchBtn.Text.Value = "Push /search?q=hello&page=1";
-            searchBtn.Variant.Value = "primary";
+            var searchBtn = MakeButton("Push /search?q=hello&page=1");
             searchBtn.style.marginTop = 16;
-            searchBtn.RegisterCallback<ClickEvent>(_ => Router.Push("/search?q=hello&page=1"));
+            searchBtn.clicked += () => Router.Push("/search?q=hello&page=1");
             Add(searchBtn);
         }
     }

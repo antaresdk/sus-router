@@ -1,15 +1,14 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 using Sharq.Core;
 using Sharq.Router;
-using Sharq.Kit;
-using TabItem = SusTabs.TabItem;
 
 /// <summary>
 /// Modals & Transitions — modals + transition animation.
 /// Demonstrates: SusRouterModal (info/confirm/stack),
-/// NavigateWithTransition (FadeOut/FadeIn), SusModalService.
+/// NavigateWithTransition (FadeOut/FadeIn).
 /// </summary>
 [RequireComponent(typeof(UIDocument))]
 public class ModalExample : MonoBehaviour
@@ -22,7 +21,7 @@ public class ModalExample : MonoBehaviour
     private void OnEnable()
     {
         try { BuildUI(); }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
             Debug.LogError($"[Modal] OnEnable failed: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
         }
@@ -40,8 +39,6 @@ public class ModalExample : MonoBehaviour
         root.style.flexGrow = 1f;
         root.style.backgroundColor = new Color(0.12f, 0.13f, 0.16f);
 
-        // Unified bootstrap: EventSystem + token cascade, then BuildContent (nav + router
-        // mount + overlay), then theme applied LAST so the OverlayHost inherits it.
         SusApp.Create(root)
               .UseTheme(SusTheme.Dark)
               .Configure(BuildContent)
@@ -53,7 +50,6 @@ public class ModalExample : MonoBehaviour
         var screens = root.Q<ScreenHost>(name: ScreenHost.ScreenHostName) ?? root;
         screens.style.flexGrow = 1f;
 
-        // ── Navbar: tabs + transitions ──
         var navBar = new VisualElement();
         navBar.style.flexDirection = FlexDirection.Row;
         navBar.style.alignItems = Align.Center;
@@ -64,37 +60,30 @@ public class ModalExample : MonoBehaviour
         navBar.style.backgroundColor = new Color(0.08f, 0.08f, 0.10f);
         navBar.style.flexShrink = 0;
 
-        var navTabs = new SusTabs();
-        navTabs.Items.Value = new List<TabItem>
+        var navTabs = new SimpleTabBar(new[]
         {
-            new() { Title = "Page 1", Value = "/page-1" },
-            new() { Title = "Page 2", Value = "/page-2" },
-            new() { Title = "Page 3", Value = "/page-3" },
-        };
-        navTabs.Model.Value = "/page-1";
-        navBar.Add(navTabs);
+            ("Page 1", "/page-1"),
+            ("Page 2", "/page-2"),
+            ("Page 3", "/page-3"),
+        }, "/page-1");
+        navBar.Add(navTabs.Root);
 
-        var animToggle = new SusToggle();
-        animToggle.Label.Value = "Animate transition";
-        animToggle.Model.Value = true; // ON by default — show the fade animation
+        var animToggle = new Toggle("Animate transition") { value = true };
         animToggle.style.marginLeft = 16;
-        animToggle.OnChange += v => _animateTransition = v;
+        animToggle.RegisterValueChangedCallback(evt => _animateTransition = evt.newValue);
         navBar.Add(animToggle);
 
-        var hintChip = new SusChip();
-        hintChip.Label.Value = "Fade 0.3s";
-        hintChip.Variant.Value = "outlined";
+        var hintChip = MakeChip("Fade 0.3s");
         hintChip.style.marginLeft = 12;
         navBar.Add(hintChip);
 
-        animToggle.Model.Changed += (_, v) =>
-            hintChip.Label.Value = v ? "Fade 0.3s" : "No animation";
+        animToggle.RegisterValueChangedCallback(evt =>
+            hintChip.text = evt.newValue ? "Fade 0.3s" : "No animation");
 
         screens.Add(navBar);
 
-        // ── Modal buttons row ──
         var modalHint = new Label(
-            "← Modals appear in the overlay. Popup → Modals → Info/Confirm/Stack.");
+            "← Modals appear in the overlay. Use Open Info / Confirm / Stack.");
         modalHint.style.color = new Color(0.5f, 0.5f, 0.6f);
         modalHint.style.fontSize = 12;
         modalHint.style.paddingLeft = 16;
@@ -108,28 +97,22 @@ public class ModalExample : MonoBehaviour
         modalRow.style.paddingRight = 16;
         modalRow.style.paddingBottom = 6;
 
-        var infoBtn = new SusButton();
-        infoBtn.Text.Value = "Open Info";
-        infoBtn.Variant.Value = "primary";
-        infoBtn.RegisterCallback<ClickEvent>(_ =>
+        var infoBtn = MakeButton("Open Info");
+        infoBtn.clicked += () =>
             _router.ModalService?.Show(typeof(InfoDialog),
-                new() { ["title"] = "Information", ["message"] = "This is an info dialog." }));
+                new() { ["title"] = "Information", ["message"] = "This is an info dialog." });
         modalRow.Add(infoBtn);
 
-        var confirmBtn = new SusButton();
-        confirmBtn.Text.Value = "Open Confirm";
-        confirmBtn.Variant.Value = "warning";
+        var confirmBtn = MakeButton("Open Confirm");
         confirmBtn.style.marginLeft = 8;
-        confirmBtn.RegisterCallback<ClickEvent>(_ =>
+        confirmBtn.clicked += () =>
             _router.ModalService?.Show(typeof(ConfirmDialog),
-                new() { ["message"] = "Are you sure?" }));
+                new() { ["message"] = "Are you sure?" });
         modalRow.Add(confirmBtn);
 
-        var stackBtn = new SusButton();
-        stackBtn.Text.Value = "Stack 3";
-        stackBtn.Variant.Value = "secondary";
+        var stackBtn = MakeButton("Stack 3");
         stackBtn.style.marginLeft = 8;
-        stackBtn.RegisterCallback<ClickEvent>(_ =>
+        stackBtn.clicked += () =>
         {
             _router.ModalService?.Show(typeof(ConfirmDialog),
                 new() { ["message"] = "First (bottom)" });
@@ -137,7 +120,7 @@ public class ModalExample : MonoBehaviour
                 new() { ["title"] = "Second", ["message"] = "On top of first" });
             _router.ModalService?.Show(typeof(ConfirmDialog),
                 new() { ["message"] = "Third (top)" });
-        });
+        };
         modalRow.Add(stackBtn);
 
         screens.Add(modalRow);
@@ -146,35 +129,33 @@ public class ModalExample : MonoBehaviour
         routeSlot.style.flexGrow = 1f;
         screens.Add(routeSlot);
 
-        // ── Router ──
+        var overlayHost = SusBootstrap.GetOrCreateOverlay(root);
         _router = new SusRouter();
-        _router.Init(SusBootstrap.GetOrCreateOverlay(root));
+        _router.Init(overlayHost);
 
         _router.Register("/page-1", typeof(PageScreen));
         _router.Register("/page-2", typeof(PageScreen));
         _router.Register("/page-3", typeof(PageScreen));
 
         _router.Mount(routeSlot, "/page-1");
-        // Mount() already calls Init() internally (guarded). No need for explicit Init().
 
-        // ── Floating modal controls (overlay, always above modals) ──
         BuildModalControls(overlayHost);
 
-        navTabs.OnTabChanged += path =>
+        navTabs.OnChanged += path =>
         {
             if (_animateTransition)
                 _router.NavigateWithTransition(path, 0.3f);
             else
             {
                 _router.Push(path);
-                navTabs.Model.Value = _router.CurrentRoute.Value?.Record?.Path ?? "/page-1";
+                navTabs.SetValue(_router.CurrentRoute.Value?.Record?.Path ?? "/page-1");
             }
         };
 
         _router.CurrentRoute.Changed += (o, n) =>
         {
             if (n?.Record?.Path != null)
-                navTabs.Model.Value = n.Record.Path;
+                navTabs.SetValue(n.Record.Path);
         };
 
         Debug.Log("[Modal] Ready. Use buttons to open modals, tabs to switch pages.");
@@ -193,26 +174,20 @@ public class ModalExample : MonoBehaviour
         panel.style.paddingBottom = 6;
         panel.style.paddingLeft = 12;
         panel.style.paddingRight = 12;
-        panel.pickingMode = PickingMode.Position; // catch clicks, don't pass through
+        panel.pickingMode = PickingMode.Position;
 
-        var counterChip = new SusChip();
-        counterChip.Label.Value = "0 modals";
-        counterChip.Variant.Value = "outlined";
+        var counterChip = MakeChip("0 modals");
         panel.Add(counterChip);
 
-        var closeBtn = new SusButton();
-        closeBtn.Text.Value = "Close Top";
-        closeBtn.Variant.Value = "danger";
+        var closeBtn = MakeButton("Close Top");
         closeBtn.style.marginLeft = 10;
-        closeBtn.RegisterCallback<ClickEvent>(_ =>
-            _router.ModalService?.Close());
+        closeBtn.clicked += () => _router.ModalService?.Close();
         panel.Add(closeBtn);
 
-        // ── Reactive binding: counter follows actual modal stack depth ──
         if (_router.ModalService != null)
         {
             _router.ModalService.CountProp.Changed += (_, newCount) =>
-                counterChip.Label.Value = newCount == 0
+                counterChip.text = newCount == 0
                     ? "0 modals"
                     : $"{newCount} modal{(newCount == 1 ? "" : "s")}";
         }
@@ -220,9 +195,73 @@ public class ModalExample : MonoBehaviour
         overlayHost.AddToOverlay(panel, OverlayCategory.Dropdown);
     }
 
-    // ════════════════════════════════════════════════════════════════
-    //  Screens
-    // ════════════════════════════════════════════════════════════════
+    internal static Button MakeButton(string text)
+    {
+        var b = new Button { text = text };
+        b.AddToClassList("modal-btn");
+        return b;
+    }
+
+    internal static Label MakeChip(string text)
+    {
+        var l = new Label(text);
+        l.style.backgroundColor = new Color(0.25f, 0.25f, 0.32f);
+        l.style.color = Color.white;
+        l.style.fontSize = 12;
+        l.style.paddingLeft = 8;
+        l.style.paddingRight = 8;
+        l.style.paddingTop = 4;
+        l.style.paddingBottom = 4;
+        l.style.unityTextAlign = TextAnchor.MiddleCenter;
+        return l;
+    }
+
+    internal sealed class SimpleTabBar
+    {
+        public VisualElement Root { get; }
+        public event Action<string> OnChanged;
+        private readonly Dictionary<string, Button> _buttons = new();
+        private string _value;
+
+        public SimpleTabBar(IEnumerable<(string title, string value)> items, string initial)
+        {
+            Root = new VisualElement();
+            Root.style.flexDirection = FlexDirection.Row;
+            Root.style.flexGrow = 1f;
+            _value = initial;
+            foreach (var (title, value) in items)
+            {
+                var path = value;
+                var btn = new Button(() =>
+                {
+                    SetValue(path);
+                    OnChanged?.Invoke(path);
+                }) { text = title };
+                btn.style.marginRight = 4;
+                _buttons[path] = btn;
+                Root.Add(btn);
+            }
+            RefreshStyles();
+        }
+
+        public void SetValue(string path)
+        {
+            _value = path;
+            RefreshStyles();
+        }
+
+        private void RefreshStyles()
+        {
+            foreach (var kv in _buttons)
+            {
+                var on = kv.Key == _value;
+                kv.Value.style.backgroundColor = on
+                    ? new Color(0.25f, 0.45f, 0.75f)
+                    : new Color(0.18f, 0.18f, 0.22f);
+                kv.Value.style.color = Color.white;
+            }
+        }
+    }
 
     internal class PageScreen : SusScreen
     {
@@ -251,11 +290,7 @@ public class ModalExample : MonoBehaviour
         }
     }
 
-    // ════════════════════════════════════════════════════════════════
-    //  Modal dialogs
-    // ════════════════════════════════════════════════════════════════
-
-    internal class ConfirmDialog : Sharq.Router.SusRouterModal
+    internal class ConfirmDialog : SusRouterModal
     {
         private Label _msgLabel;
 
@@ -278,23 +313,21 @@ public class ModalExample : MonoBehaviour
 
             var btnRow = new VisualElement { style = { flexDirection = FlexDirection.Row } };
 
-            var okBtn = new SusButton();
-            okBtn.Text.Value = "OK";
-            okBtn.Variant.Value = "primary";
-            okBtn.RegisterCallback<ClickEvent>(_ => Dismiss());
+            var okBtn = MakeButton("OK");
+            okBtn.AddToClassList("modal-btn--ok");
+            okBtn.clicked += () => Dismiss();
             btnRow.Add(okBtn);
 
-            var cancelBtn = new SusButton();
-            cancelBtn.Text.Value = "Cancel";
-            cancelBtn.Variant.Value = "secondary";
+            var cancelBtn = MakeButton("Cancel");
+            cancelBtn.AddToClassList("modal-btn--cancel");
             cancelBtn.style.marginLeft = 8;
-            cancelBtn.RegisterCallback<ClickEvent>(_ => Dismiss());
+            cancelBtn.clicked += () => Dismiss();
             btnRow.Add(cancelBtn);
 
             Add(btnRow);
         }
 
-        protected internal override void Shown()
+        protected override void Shown()
         {
             var msg = Props.TryGetValue("message", out var v) ? v?.ToString() : "Confirm?";
             _msgLabel.text = msg;
@@ -302,7 +335,7 @@ public class ModalExample : MonoBehaviour
         }
     }
 
-    internal class InfoDialog : Sharq.Router.SusRouterModal
+    internal class InfoDialog : SusRouterModal
     {
         private Label _bodyLabel;
 
@@ -323,14 +356,13 @@ public class ModalExample : MonoBehaviour
             _bodyLabel.style.marginBottom = 16;
             Add(_bodyLabel);
 
-            var closeBtn = new SusButton();
-            closeBtn.Text.Value = "Close";
-            closeBtn.Variant.Value = "primary";
-            closeBtn.RegisterCallback<ClickEvent>(_ => Dismiss());
+            var closeBtn = MakeButton("Close");
+            closeBtn.AddToClassList("modal-btn--ok");
+            closeBtn.clicked += () => Dismiss();
             Add(closeBtn);
         }
 
-        protected internal override void Shown()
+        protected override void Shown()
         {
             var title = Props.TryGetValue("title", out var t) ? t?.ToString() : "Info";
             var msg = Props.TryGetValue("message", out var m) ? m?.ToString() : "";

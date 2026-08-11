@@ -1,15 +1,14 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 using Sharq.Core;
 using Sharq.Router;
-using Sharq.Kit;
-using TabItem = SusTabs.TabItem;
 
 /// <summary>
-/// Basic Routing — simple navigation with SusTabs.
+/// Basic Routing — simple navigation with a UITK tab bar.
 /// Demonstrates: Push, Replace, Back, Home.
-/// Navbar: SusTabs (4 tabs) + Back + CurrentRoute chip.
+/// Navbar: tab buttons (4) + Back + CurrentRoute chip.
 /// </summary>
 [RequireComponent(typeof(UIDocument))]
 public class BasicRoutingExample : MonoBehaviour
@@ -18,14 +17,14 @@ public class BasicRoutingExample : MonoBehaviour
 
     private SusRouter _router;
     private VisualElement _navBar;
-    private SusChip _routeChip;
-    private SusButton _backBtn;
-    private SusTabs _navTabs;
+    private Label _routeChip;
+    private Button _backBtn;
+    private SimpleTabBar _navTabs;
 
     private void OnEnable()
     {
         try { BuildUI(); }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
             Debug.LogError($"[BasicRouting] OnEnable failed: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
         }
@@ -42,8 +41,6 @@ public class BasicRoutingExample : MonoBehaviour
         var root = doc.rootVisualElement;
         root.style.backgroundColor = new Color(0.12f, 0.13f, 0.16f);
 
-        // Unified bootstrap: EventSystem + token cascade, then BuildContent (nav + router
-        // mount + overlay), then theme applied LAST so the OverlayHost inherits it.
         SusApp.Create(root)
               .UseTheme(SusTheme.Dark)
               .Configure(BuildContent)
@@ -55,7 +52,6 @@ public class BasicRoutingExample : MonoBehaviour
         var screens = root.Q<ScreenHost>(name: ScreenHost.ScreenHostName) ?? root;
         screens.style.flexGrow = 1f;
 
-        // ── Navbar ──
         _navBar = new VisualElement();
         _navBar.style.flexDirection = FlexDirection.Row;
         _navBar.style.alignItems = Align.Center;
@@ -66,27 +62,20 @@ public class BasicRoutingExample : MonoBehaviour
         _navBar.style.backgroundColor = new Color(0.08f, 0.08f, 0.10f);
         _navBar.style.flexShrink = 0;
 
-        // Back button
-        _backBtn = new SusButton();
-        _backBtn.Text.Value = "<- Back";
+        _backBtn = MakeButton("<- Back");
 
-        // SusTabs navigation
-        _navTabs = new SusTabs();
-        _navTabs.Items.Value = new List<TabItem>
+        _navTabs = new SimpleTabBar(new[]
         {
-            new() { Title = "Home", Value = "/home" },
-            new() { Title = "About", Value = "/about" },
-            new() { Title = "Contact", Value = "/contact" },
-            new() { Title = "Settings", Value = "/settings" },
-        };
-        _navTabs.Model.Value = "/home";
+            ("Home", "/home"),
+            ("About", "/about"),
+            ("Contact", "/contact"),
+            ("Settings", "/settings"),
+        }, "/home");
 
-        // Current route chip
-        _routeChip = new SusChip();
-        _routeChip.Label.Value = "/";
+        _routeChip = MakeChip("/");
 
         _navBar.Add(_backBtn);
-        _navBar.Add(_navTabs);
+        _navBar.Add(_navTabs.Root);
         _navBar.Add(_routeChip);
         screens.Add(_navBar);
 
@@ -94,7 +83,6 @@ public class BasicRoutingExample : MonoBehaviour
         routeSlot.style.flexGrow = 1f;
         screens.Add(routeSlot);
 
-        // Overlay on document root; RouteView in ScreenHost slot below chrome.
         _router = new SusRouter();
         _router.Init(SusBootstrap.GetOrCreateOverlay(root));
 
@@ -105,26 +93,23 @@ public class BasicRoutingExample : MonoBehaviour
 
         _router.Mount(routeSlot, "/home");
 
-        // Wire SusTabs and Back button
-        _navTabs.OnTabChanged += path =>
+        _navTabs.OnChanged += path =>
         {
             _router.Push(path);
-            _navTabs.Model.Value = _router.CurrentRoute.Value?.Record?.Path ?? "/home";
+            _navTabs.SetValue(_router.CurrentRoute.Value?.Record?.Path ?? "/home");
         };
-        _backBtn.RegisterCallback<ClickEvent>(_ =>
+        _backBtn.clicked += () =>
         {
             _router.Back();
             UpdateBackButton();
-        });
+        };
 
         _router.CurrentRoute.Changed += (o, n) =>
         {
-            _routeChip.Label.Value = n?.FullPath ?? "/";
-            // Sync SusTabs Model with current route
+            _routeChip.text = n?.FullPath ?? "/";
             if (n?.Record?.Path != null)
-                _navTabs.Model.Value = n.Record.Path;
+                _navTabs.SetValue(n.Record.Path);
             UpdateBackButton();
-            UpdateNavTabsModel(n?.Record?.Path);
         };
 
         UpdateBackButton();
@@ -134,12 +119,78 @@ public class BasicRoutingExample : MonoBehaviour
         _backBtn.style.display = (_router?.CanGoBack ?? false)
             ? DisplayStyle.Flex : DisplayStyle.None;
 
-    private void UpdateNavTabsModel(string path) =>
-        _navTabs.Model.Value = path ?? "/home";
+    internal static Button MakeButton(string text)
+    {
+        var b = new Button { text = text };
+        b.style.marginRight = 4;
+        return b;
+    }
 
-    // ════════════════════════════════════════════════════════════════
-    //  Screens
-    // ════════════════════════════════════════════════════════════════
+    internal static Label MakeChip(string text)
+    {
+        var l = new Label(text);
+        l.style.backgroundColor = new Color(0.25f, 0.25f, 0.32f);
+        l.style.color = Color.white;
+        l.style.fontSize = 12;
+        l.style.paddingLeft = 8;
+        l.style.paddingRight = 8;
+        l.style.paddingTop = 4;
+        l.style.paddingBottom = 4;
+        l.style.marginLeft = 8;
+        l.style.unityTextAlign = TextAnchor.MiddleCenter;
+        return l;
+    }
+
+    /// <summary>Minimal UITK tab strip (Button row) for router samples.</summary>
+    internal sealed class SimpleTabBar
+    {
+        public VisualElement Root { get; }
+        public event Action<string> OnChanged;
+
+        private readonly Dictionary<string, Button> _buttons = new();
+        private string _value;
+
+        public SimpleTabBar(IEnumerable<(string title, string value)> items, string initial,
+            bool vertical = false)
+        {
+            Root = new VisualElement();
+            Root.style.flexDirection = vertical ? FlexDirection.Column : FlexDirection.Row;
+            Root.style.flexGrow = 1f;
+            _value = initial;
+            foreach (var (title, value) in items)
+            {
+                var path = value;
+                var btn = new Button(() =>
+                {
+                    SetValue(path);
+                    OnChanged?.Invoke(path);
+                }) { text = title };
+                btn.style.marginRight = vertical ? 0 : 4;
+                btn.style.marginBottom = vertical ? 4 : 0;
+                _buttons[path] = btn;
+                Root.Add(btn);
+            }
+            RefreshStyles();
+        }
+
+        public void SetValue(string path)
+        {
+            _value = path;
+            RefreshStyles();
+        }
+
+        private void RefreshStyles()
+        {
+            foreach (var kv in _buttons)
+            {
+                var on = kv.Key == _value;
+                kv.Value.style.backgroundColor = on
+                    ? new Color(0.25f, 0.45f, 0.75f)
+                    : new Color(0.18f, 0.18f, 0.22f);
+                kv.Value.style.color = Color.white;
+            }
+        }
+    }
 
     internal class HomeScreen : SusScreen
     {
@@ -152,29 +203,23 @@ public class BasicRoutingExample : MonoBehaviour
 
             Add(new Label("Home") { style = { fontSize = 28, color = Color.white, marginBottom = 16 } });
 
-            var btn1 = new SusButton();
-            btn1.Text.Value = "Go to About";
-            btn1.Variant.Value = "primary";
-            btn1.RegisterCallback<ClickEvent>(_ => Router.Push("/about"));
+            var btn1 = MakeButton("Go to About");
+            btn1.clicked += () => Router.Push("/about");
             Add(btn1);
 
-            var btn2 = new SusButton();
-            btn2.Text.Value = "Go to Contact";
-            btn2.Variant.Value = "secondary";
-            btn2.RegisterCallback<ClickEvent>(_ => Router.Push("/contact"));
+            var btn2 = MakeButton("Go to Contact");
             btn2.style.marginTop = 8;
+            btn2.clicked += () => Router.Push("/contact");
             Add(btn2);
 
-            var btn3 = new SusButton();
-            btn3.Text.Value = "Replace with Settings";
-            btn3.Variant.Value = "warning";
-            btn3.RegisterCallback<ClickEvent>(_ => Router.Replace("/settings"));
+            var btn3 = MakeButton("Replace with Settings");
             btn3.style.marginTop = 8;
+            btn3.clicked += () => Router.Replace("/settings");
             Add(btn3);
 
-            var chip = new SusChip();
-            chip.Label.Value = "Home";
+            var chip = MakeChip("Home");
             chip.style.marginTop = 24;
+            chip.style.marginLeft = 0;
             Add(chip);
         }
     }
@@ -198,7 +243,16 @@ public class BasicRoutingExample : MonoBehaviour
             link.Add(linkLabel);
             Add(link);
 
-            Add(new SusImg());
+            var placeholder = new VisualElement();
+            placeholder.style.width = 120;
+            placeholder.style.height = 80;
+            placeholder.style.marginTop = 16;
+            placeholder.style.backgroundColor = new Color(0.2f, 0.22f, 0.28f);
+            Add(placeholder);
+            Add(new Label("(image placeholder)")
+            {
+                style = { color = new Color(0.5f, 0.5f, 0.55f), fontSize = 12, marginTop = 4 }
+            });
 
             Add(new Label("About this app")
             {
@@ -219,20 +273,16 @@ public class BasicRoutingExample : MonoBehaviour
 
             Add(new Label("Contact") { style = { fontSize = 28, color = Color.white, marginBottom = 16 } });
 
-            var nameField = new SusTextfield();
-            nameField.Label.Value = "Name";
+            var nameField = new TextField("Name");
             nameField.style.marginBottom = 8;
             Add(nameField);
 
-            var emailField = new SusTextfield();
-            emailField.Label.Value = "Email";
+            var emailField = new TextField("Email");
             emailField.style.marginBottom = 16;
             Add(emailField);
 
-            var submitBtn = new SusButton();
-            submitBtn.Text.Value = "Submit";
-            submitBtn.Variant.Value = "success";
-            submitBtn.RegisterCallback<ClickEvent>(_ => Debug.Log("[Contact] Submitted"));
+            var submitBtn = MakeButton("Submit");
+            submitBtn.clicked += () => Debug.Log("[Contact] Submitted");
             Add(submitBtn);
         }
     }
@@ -248,14 +298,11 @@ public class BasicRoutingExample : MonoBehaviour
 
             Add(new Label("Settings") { style = { fontSize = 28, color = Color.white, marginBottom = 16 } });
 
-            var darkToggle = new SusToggle();
-            darkToggle.Label.Value = "Dark theme";
+            var darkToggle = new Toggle("Dark theme");
             darkToggle.style.marginBottom = 8;
             Add(darkToggle);
 
-            var notifToggle = new SusToggle();
-            notifToggle.Label.Value = "Notifications";
-            Add(notifToggle);
+            Add(new Toggle("Notifications"));
         }
     }
 }

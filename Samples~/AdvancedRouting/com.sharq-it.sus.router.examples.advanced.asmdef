@@ -3,8 +3,7 @@
     "rootNamespace": "Sharq.Router.Examples",
     "references": [
         "com.sharq-it.sus.core",
-        "com.sharq-it.sus.router",
-        "com.sharq-it.sus.kit"
+        "com.sharq-it.sus.router"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

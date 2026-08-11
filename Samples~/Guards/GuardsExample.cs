@@ -1,15 +1,14 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 using Sharq.Core;
 using Sharq.Router;
-using Sharq.Kit;
-using TabItem = SusTabs.TabItem;
 
 /// <summary>
 /// Guards — route protection.
 /// Demonstrates:
-/// • beforeEach   — auth check (SusToggle "Logged in")
+/// • beforeEach   — auth check (Toggle "Logged in")
 /// • CanLeave     — confirm on unsaved changes (modal)
 /// • Redirect     — redirect /old-admin → /admin (via Redirect config)
 /// </summary>
@@ -20,20 +19,16 @@ public class GuardsExample : MonoBehaviour
 
     private SusRouter _router;
     private bool _isLoggedIn;
-    private SusChip _statusChip;
+    private Label _statusChip;
 
     private void OnEnable()
     {
         try { BuildUI(); }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
             Debug.LogError($"[Guards] OnEnable failed: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
         }
     }
-
-    // ════════════════════════════════════════════════════════════════
-    //  UI
-    // ════════════════════════════════════════════════════════════════
 
     private void BuildUI()
     {
@@ -47,7 +42,6 @@ public class GuardsExample : MonoBehaviour
         root.style.flexGrow = 1f;
         root.style.backgroundColor = new Color(0.12f, 0.13f, 0.16f);
 
-        // Remove stray overlays (splash/loading) if the bootstrapper inserted them.
         foreach (var stray in root.Query<VisualElement>().Build())
         {
             if (stray.name == "sus-splash-screen" || stray.name == "sus-loading-screen")
@@ -57,8 +51,6 @@ public class GuardsExample : MonoBehaviour
             }
         }
 
-        // Unified bootstrap: EventSystem + token cascade, then BuildContent (nav + router
-        // mount + overlay), then theme applied LAST so the OverlayHost inherits it.
         SusApp.Create(root)
               .UseTheme(SusTheme.Dark)
               .Configure(BuildContent)
@@ -70,7 +62,6 @@ public class GuardsExample : MonoBehaviour
         var screens = root.Q<ScreenHost>(name: ScreenHost.ScreenHostName) ?? root;
         screens.style.flexGrow = 1f;
 
-        // ── Navbar ──
         var navBar = new VisualElement();
         navBar.style.flexDirection = FlexDirection.Row;
         navBar.style.alignItems = Align.Center;
@@ -80,25 +71,25 @@ public class GuardsExample : MonoBehaviour
         navBar.style.paddingRight = 16;
         navBar.style.backgroundColor = new Color(0.08f, 0.08f, 0.10f);
 
-        var navTabs = new SusTabs();
-        navTabs.Items.Value = new List<TabItem>
+        var navTabs = new SimpleTabBar(new[]
         {
-            new() { Title = "Home",     Value = "/home" },
-            new() { Title = "Admin",    Value = "/admin" },
-            new() { Title = "Profile",  Value = "/profile" },
-            new() { Title = "OldAdmin", Value = "/old-admin" },
-        };
-        navTabs.Model.Value = "/home";
-        navBar.Add(navTabs);
+            ("Home", "/home"),
+            ("Admin", "/admin"),
+            ("Profile", "/profile"),
+            ("OldAdmin", "/old-admin"),
+        }, "/home");
+        navBar.Add(navTabs.Root);
 
-        var loginToggle = new SusToggle();
-        loginToggle.Label.Value = "Logged in";
+        var loginToggle = new Toggle("Logged in");
         loginToggle.style.marginLeft = 16;
-        loginToggle.OnChange += v => { _isLoggedIn = v; UpdateStatusChip(); };
+        loginToggle.RegisterValueChangedCallback(evt =>
+        {
+            _isLoggedIn = evt.newValue;
+            UpdateStatusChip();
+        });
         navBar.Add(loginToggle);
 
-        _statusChip = new SusChip();
-        _statusChip.Label.Value = "Not logged in";
+        _statusChip = MakeChip("Not logged in");
         _statusChip.style.marginLeft = 16;
         navBar.Add(_statusChip);
 
@@ -108,25 +99,21 @@ public class GuardsExample : MonoBehaviour
         routeSlot.style.flexGrow = 1f;
         screens.Add(routeSlot);
 
-        // ── Router + Guards ──
         _router = new SusRouter();
         _router.Init(SusBootstrap.GetOrCreateOverlay(root));
 
-        // beforeEach: auth check
         _router.BeforeEach((from, to) =>
         {
             if (to.FullPath == "/home") return true;
             if (!_isLoggedIn)
             {
                 Debug.Log($"[Guard] beforeEach BLOCKED: {from.FullPath} → {to.FullPath}");
-                _statusChip.Label.Value = $"🔒 Login required";
+                _statusChip.text = "Login required";
                 return false;
             }
             return true;
         });
 
-        // Redirect — /old-admin redirected to /admin via Redirect config (not through beforeResolve).
-        // Redirect config is handled BEFORE screen creation — no nested navigation.
         _router.Register("/home", typeof(HomeScreen));
         _router.Register("/admin", typeof(AdminScreen), new SusRouteConfig
         {
@@ -139,24 +126,19 @@ public class GuardsExample : MonoBehaviour
         });
 
         _router.Mount(routeSlot, "/home");
-        // Mount() already calls Init() internally (guarded). No need for explicit Init().
 
-        navTabs.OnTabChanged += path =>
+        navTabs.OnChanged += path =>
         {
             var result = _router.Push(path);
-            // Always resync — redirects can cause a no-op that doesn't fire
-            // CurrentRoute.Changed (fromRoute == toRoute after redirect → no-op).
-            navTabs.Model.Value = _router.CurrentRoute.Value?.Record?.Path ?? "/home";
+            navTabs.SetValue(_router.CurrentRoute.Value?.Record?.Path ?? "/home");
             if (result == NavigationResult.Busy)
-            {
-                Debug.Log($"[Guards] Router busy — request dropped.");
-            }
+                Debug.Log("[Guards] Router busy — request dropped.");
         };
 
         _router.CurrentRoute.Changed += (o, n) =>
         {
             if (n?.Record?.Path != null)
-                navTabs.Model.Value = n.Record.Path;
+                navTabs.SetValue(n.Record.Path);
             UpdateStatusChip();
         };
 
@@ -165,12 +147,75 @@ public class GuardsExample : MonoBehaviour
 
     private void UpdateStatusChip()
     {
-        _statusChip.Label.Value = _isLoggedIn ? "✅ Logged in" : "Not logged in";
+        _statusChip.text = _isLoggedIn ? "Logged in" : "Not logged in";
     }
 
-    // ════════════════════════════════════════════════════════════════
-    //  AdminGuard — per-route: checks dirty form via statics
-    // ════════════════════════════════════════════════════════════════
+    internal static Button MakeButton(string text)
+    {
+        var b = new Button { text = text };
+        b.style.marginRight = 4;
+        return b;
+    }
+
+    internal static Label MakeChip(string text)
+    {
+        var l = new Label(text);
+        l.style.backgroundColor = new Color(0.25f, 0.25f, 0.32f);
+        l.style.color = Color.white;
+        l.style.fontSize = 12;
+        l.style.paddingLeft = 8;
+        l.style.paddingRight = 8;
+        l.style.paddingTop = 4;
+        l.style.paddingBottom = 4;
+        return l;
+    }
+
+    internal sealed class SimpleTabBar
+    {
+        public VisualElement Root { get; }
+        public event Action<string> OnChanged;
+        private readonly Dictionary<string, Button> _buttons = new();
+        private string _value;
+
+        public SimpleTabBar(IEnumerable<(string title, string value)> items, string initial)
+        {
+            Root = new VisualElement();
+            Root.style.flexDirection = FlexDirection.Row;
+            Root.style.flexGrow = 1f;
+            _value = initial;
+            foreach (var (title, value) in items)
+            {
+                var path = value;
+                var btn = new Button(() =>
+                {
+                    SetValue(path);
+                    OnChanged?.Invoke(path);
+                }) { text = title };
+                btn.style.marginRight = 4;
+                _buttons[path] = btn;
+                Root.Add(btn);
+            }
+            RefreshStyles();
+        }
+
+        public void SetValue(string path)
+        {
+            _value = path;
+            RefreshStyles();
+        }
+
+        private void RefreshStyles()
+        {
+            foreach (var kv in _buttons)
+            {
+                var on = kv.Key == _value;
+                kv.Value.style.backgroundColor = on
+                    ? new Color(0.25f, 0.45f, 0.75f)
+                    : new Color(0.18f, 0.18f, 0.22f);
+                kv.Value.style.color = Color.white;
+            }
+        }
+    }
 
     private class AdminGuard : ISusRouteGuard
     {
@@ -181,18 +226,13 @@ public class GuardsExample : MonoBehaviour
             if (AdminScreen.IsDirty)
             {
                 Debug.Log("[AdminGuard] CanLeave: blocked — form is dirty");
-                // Show the modal only if one is not already open
                 if (!AdminScreen.IsShowingLeaveModal)
                     AdminScreen.ShowLeaveConfirmation?.Invoke(from, to);
-                return false; // Always block when dirty
+                return false;
             }
             return true;
         }
     }
-
-    // ════════════════════════════════════════════════════════════════
-    //  HomeScreen — instructions and buttons
-    // ════════════════════════════════════════════════════════════════
 
     internal class HomeScreen : SusScreen
     {
@@ -203,12 +243,11 @@ public class GuardsExample : MonoBehaviour
             style.paddingLeft = 32;
             style.paddingRight = 32;
 
-            Add(new Label("🔐 Navigation Guards")
+            Add(new Label("Navigation Guards")
             {
                 style = { fontSize = 28, color = Color.white, marginBottom = 20 },
             });
 
-            // Info panel: what guards are and how to test them
             var info = InfoPanel(new[]
             {
                 ("What this is", "Guards protect routes. They block navigation " +
@@ -229,34 +268,27 @@ public class GuardsExample : MonoBehaviour
             row.style.flexDirection = FlexDirection.Row;
             row.style.marginTop = 8;
 
-            var adminBtn = new SusButton();
-            adminBtn.Text.Value = "Go to Admin";
-            adminBtn.Variant.Value = "primary";
-            adminBtn.RegisterCallback<ClickEvent>(_ => Router.Push("/admin"));
+            var adminBtn = MakeButton("Go to Admin");
+            adminBtn.clicked += () => Router.Push("/admin");
             row.Add(adminBtn);
 
-            var profileBtn = new SusButton();
-            profileBtn.Text.Value = "Go to Profile";
+            var profileBtn = MakeButton("Go to Profile");
             profileBtn.style.marginLeft = 12;
-            profileBtn.RegisterCallback<ClickEvent>(_ => Router.Push("/profile"));
+            profileBtn.clicked += () => Router.Push("/profile");
             row.Add(profileBtn);
 
             Add(row);
         }
     }
 
-    // ════════════════════════════════════════════════════════════════
-    //  AdminScreen — form + dirty + CanLeave guard
-    // ════════════════════════════════════════════════════════════════
-
     internal class AdminScreen : SusScreen
     {
         public static bool IsDirty { get; private set; }
         public static bool IsShowingLeaveModal { get; private set; }
-        public static System.Action<SusRoute, SusRoute> ShowLeaveConfirmation { get; set; }
+        public static Action<SusRoute, SusRoute> ShowLeaveConfirmation { get; set; }
 
-        private SusTextfield _titleField;
-        private SusChip _dirtyChip;
+        private TextField _titleField;
+        private Label _dirtyChip;
 
         protected override void Build()
         {
@@ -270,7 +302,7 @@ public class GuardsExample : MonoBehaviour
             style.paddingRight = 32;
             style.maxWidth = 500;
 
-            Add(new Label("⚙️ Admin Panel")
+            Add(new Label("Admin Panel")
             {
                 style =
                 {
@@ -290,41 +322,36 @@ public class GuardsExample : MonoBehaviour
 
             Add(Section("Announcement"));
 
-            _titleField = new SusTextfield();
-            _titleField.Label.Value = "Title";
-            _titleField.Placeholder.Value = "Type something...";
-            _titleField.Model.Changed += (_, _) =>
+            _titleField = new TextField("Title");
+            _titleField.value = "";
+            _titleField.RegisterValueChangedCallback(_ =>
             {
-                if (!string.IsNullOrEmpty(_titleField.Model.Value))
+                if (!string.IsNullOrEmpty(_titleField.value))
                 {
                     IsDirty = true;
-                    _dirtyChip.Label.Value = "📝 Unsaved changes";
+                    _dirtyChip.text = "Unsaved changes";
                     _dirtyChip.style.display = DisplayStyle.Flex;
                 }
-            };
+            });
             _titleField.style.marginBottom = 12;
             Add(_titleField);
 
-            _dirtyChip = new SusChip();
-            _dirtyChip.Label.Value = "📝 Unsaved changes";
+            _dirtyChip = MakeChip("Unsaved changes");
             _dirtyChip.style.display = DisplayStyle.None;
             _dirtyChip.style.marginBottom = 8;
             Add(_dirtyChip);
 
-            var saveBtn = new SusButton();
-            saveBtn.Text.Value = "Save";
-            saveBtn.Variant.Value = "tonal";
-            saveBtn.RegisterCallback<ClickEvent>(_ =>
+            var saveBtn = MakeButton("Save");
+            saveBtn.clicked += () =>
             {
                 IsDirty = false;
-                _dirtyChip.style.display = DisplayStyle.None;
-                _dirtyChip.Label.Value = "✅ Saved";
+                _dirtyChip.text = "Saved";
                 _dirtyChip.style.display = DisplayStyle.Flex;
                 schedule.Execute(() =>
                 {
                     _dirtyChip.style.display = DisplayStyle.None;
                 }).StartingIn(2000);
-            });
+            };
             Add(saveBtn);
 
             var hint = new Label("↑ Press Save OR switch tabs\n" +
@@ -346,9 +373,6 @@ public class GuardsExample : MonoBehaviour
             if (IsShowingLeaveModal) return;
             IsShowingLeaveModal = true;
 
-            var modal = new SusModal();
-
-            // Overlay backdrop
             var overlay = new VisualElement();
             overlay.style.position = Position.Absolute;
             overlay.style.left = 0;
@@ -358,11 +382,8 @@ public class GuardsExample : MonoBehaviour
             overlay.style.backgroundColor = new Color(0, 0, 0, 0.5f);
             overlay.style.alignItems = Align.Center;
             overlay.style.justifyContent = Justify.Center;
-            modal.Add(overlay);
 
-            // Card
-            var card = new SusCard();
-            card.Variant.Value = "elevated";
+            var card = Card();
             card.style.minWidth = 320f;
             card.style.paddingTop = 24f;
             card.style.paddingBottom = 24f;
@@ -386,44 +407,31 @@ public class GuardsExample : MonoBehaviour
             var btnRow = new VisualElement();
             btnRow.style.flexDirection = FlexDirection.Row;
 
-            var stayBtn = new SusButton();
-            stayBtn.Text.Value = "Stay";
-            stayBtn.Variant.Value = "outlined";
-            stayBtn.RegisterCallback<ClickEvent>(_ =>
+            void CloseModal()
             {
                 IsShowingLeaveModal = false;
-                modal.Close();
-            });
+                overlay.RemoveFromHierarchy();
+            }
+
+            var stayBtn = MakeButton("Stay");
+            stayBtn.clicked += CloseModal;
             btnRow.Add(stayBtn);
 
-            var leaveBtn = new SusButton();
-            leaveBtn.Text.Value = "Leave";
-            leaveBtn.Variant.Value = "tonal";
+            var leaveBtn = MakeButton("Leave");
             leaveBtn.style.marginLeft = 12;
-            leaveBtn.RegisterCallback<ClickEvent>(_ =>
+            leaveBtn.clicked += () =>
             {
                 IsDirty = false;
-                IsShowingLeaveModal = false;
-                modal.Close();
+                CloseModal();
                 Router.Push(to.FullPath);
-            });
+            };
             btnRow.Add(leaveBtn);
             card.Add(btnRow);
 
             overlay.Add(card);
-
-            // Also handle escape / backdrop click
-            modal.OnClosed += () => { IsShowingLeaveModal = false; };
-
-            // Add modal to screen (parent = router content area)
-            Add(modal);
-            modal.Open();
+            Add(overlay);
         }
     }
-
-    // ════════════════════════════════════════════════════════════════
-    //  ProfileScreen — demo: screen available only when authenticated
-    // ════════════════════════════════════════════════════════════════
 
     internal class ProfileScreen : SusScreen
     {
@@ -434,7 +442,7 @@ public class GuardsExample : MonoBehaviour
             style.paddingLeft = 32;
             style.paddingRight = 32;
 
-            Add(new Label("👤 Profile")
+            Add(new Label("Profile")
             {
                 style = { fontSize = 28, color = Color.white, marginBottom = 20 },
             });
@@ -451,23 +459,18 @@ public class GuardsExample : MonoBehaviour
             Add(Section("User info"));
 
             var idCard = Card();
-            var idLabel = new Label("👋 User: demo@example.com");
+            var idLabel = new Label("User: demo@example.com");
             idLabel.style.fontSize = 20;
             idLabel.style.color = Color.cyan;
             idCard.Add(idLabel);
 
-            var roleChip = new SusChip();
-            roleChip.Label.Value = "Role: Editor";
+            var roleChip = MakeChip("Role: Editor");
             roleChip.style.marginTop = 8;
             idCard.Add(roleChip);
 
             Add(idCard);
         }
     }
-
-    // ════════════════════════════════════════════════════════════════
-    //  Helpers
-    // ════════════════════════════════════════════════════════════════
 
     private static VisualElement InfoPanel((string title, string body)[] items)
     {

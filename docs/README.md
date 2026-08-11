@@ -2,7 +2,7 @@
 
 <!-- sus:gen ver pkg=sus-router -->
 > **Package:** `com.sharq-it.sus.router`  
-> **Version:** 1.0.4  
+> **Version:** 1.0.5  
 <!-- /sus:gen -->
 > **SUS UI router** — Vue Router analog: navigation, screens, modals, KeepAlive, transitions
 
@@ -78,17 +78,16 @@ router.Mount(root, "/home");
 
 ## Samples (Samples~/)
 
-| # | Sample | Router features | downstream library components |
-|---|---|---|---|
-| 1 | [BasicRouting](../Samples~/BasicRouting/) | Push, Replace, Back | SusTabs, SusButton, SusChip, SusRouteLink, SusTextfield, SusToggle, SusImg |
-| 2 | [KeepAlive](../Samples~/KeepAlive/) | KeepAlive = true/false | SusTabs, SusButton, SusTextfield, SusToggle, SusChip |
-| 3 | [Guards](../Samples~/Guards/) | beforeEach, CanEnter, CanLeave, beforeResolve | SusTabs, SusButton, SusToggle, SusTextfield, SusChip |
-| 4 | [Modals & Transitions](../Samples~/Modal/) | SusRouterModal, Fade/Slide, NavigateWithTransition | SusTabs, SusButton, SusModal |
-| 5 | [Nested & Named](../Samples~/AdvancedRouting/) | children, PushNamed, :id, ?q=, alias, redirect, lazy | SusTabs, SusChip, SusTextfield, SusToggle, SusButton |
-| 6 | [RouteLink](../Samples~/RouteLink/) | SusRouteLink, router-link-active | SusRouteLink, Label |
-| 7 | [Full Demo](../Samples~/FullDemo/) | Everything + theming | SusTabs(vertical), SusButton, SusChip, SusToggle, SusTextfield, SusModal |
+| # | Sample | Router features |
+|---|---|---|
+| 1 | [BasicRouting](../Samples~/BasicRouting/) | Push, Replace, Back |
+| 2 | [KeepAlive](../Samples~/KeepAlive/) | KeepAlive = true/false |
+| 3 | [Guards](../Samples~/Guards/) | beforeEach, CanEnter, CanLeave, beforeResolve |
+| 4 | [Modals & Transitions](../Samples~/Modal/) | SusRouterModal, Fade/Slide, NavigateWithTransition |
+| 5 | [Nested & Named](../Samples~/AdvancedRouting/) | children, PushNamed, :id, ?q=, alias, redirect, lazy |
+| 6 | [RouteLink](../Samples~/RouteLink/) | SusRouteLink, router-link-active |
+| 7 | [Full Demo](../Samples~/FullDemo/) | Everything + theming |
 
 ## Related docs
 
 - [sus-core guide](https://sus-ui.dev/docs/guide/) — core (reactivity, OverlayHost, bindings)
-- downstream library package docs (`downstream library/docs/`) — UI kit components

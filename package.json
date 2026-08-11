@@ -1,6 +1,6 @@
 ﻿{
   "name": "com.sharq-it.sus.router",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "displayName": "SusRouter",
   "description": "Vue Router-like navigation: full guard pipeline (beforeEach/beforeResolve), query params, lazy loading, named/nested routes, redirect/alias, cursor-based history, SusRouteLink, modals, KeepAlive. Depends only on sus-core.",
   "unity": "6000.0",
@@ -32,12 +32,12 @@
   "samples": [
     {
       "displayName": "Basic Routing",
-      "description": "Push/Replace/Back with SusTabs navigation. 4 screens: Home, About, Contact, Settings with downstream library components.",
+      "description": "Push/Replace/Back with tab navigation. 4 screens: Home, About, Contact, Settings.",
       "path": "Samples~/BasicRouting"
     },
     {
       "displayName": "KeepAlive",
-      "description": "Screen caching: counter and form keep state, Settings does not. SusTabs with a [K] indicator.",
+      "description": "Screen caching: counter and form keep state, Settings does not. Tab bar with a [K] indicator.",
       "path": "Samples~/KeepAlive"
     },
     {
@@ -62,7 +62,7 @@
     },
     {
       "displayName": "Full Demo",
-      "description": "ALL SusRouter features in one sample: sidebar, SusTabs(vertical), KeepAlive, guards, modals, transitions, named/nested, theming.",
+      "description": "ALL SusRouter features in one sample: vertical sidebar tabs, KeepAlive, guards, modals, transitions, named/nested, theming.",
       "path": "Samples~/FullDemo"
     }
   ]

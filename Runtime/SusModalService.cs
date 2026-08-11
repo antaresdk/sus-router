@@ -167,7 +167,7 @@ namespace Sharq.Router
 
         /// <summary>
         /// Optional modal card styling. Loaded from any package's Resources/SusRuntime
-        /// (downstream library ships SusModal.g there). Router itself does not depend on downstream library;
+        /// (downstream component libraries ship their modal styles there). Router itself has no such dependency;
         /// without it the modal host is unstyled but fully functional.
         /// </summary>
         static void EnsureSusModalSheet(VisualElement host)

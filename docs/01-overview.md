@@ -1,7 +1,7 @@
 # 1. Package overview
 
 <!-- sus:gen ver pkg=sus-router -->
-> **Package:** `com.sharq-it.sus.router` · **Version:** 1.0.4 · **Analog:** Vue Router
+> **Package:** `com.sharq-it.sus.router` · **Version:** 1.0.5 · **Analog:** Vue Router
 <!-- /sus:gen -->
 
 ## Purpose
@@ -10,7 +10,7 @@ SusRouter is the **navigation layer** for SUS. It extracts routing from a monoli
 
 | In scope | Out of scope |
 |---|---|
-| Push/Replace/Back/Forward/Go | Components — `downstream library` |
+| Push/Replace/Back/Forward/Go | UI component libraries |
 | Guard pipeline (BeforeEach/CanEnter/CanLeave/BeforeResolve) | Reactivity — `sus-core` |
 | Modals + stack (SusModalService + SusRouterModal) | Game logic — host project |
 | Code-based animations (Fade/Slide) | |
@@ -47,7 +47,7 @@ sus-core — foundation (reactivity, SusComponent, OverlayHost)
     │
 sus-router (this package) — navigation
     │
-downstream library — component library (optional)
+UI component library (optional, separate product)
     │
 host project — your application
 ```

@@ -2,10 +2,9 @@ name: tests
 # Unity Test Runner for sus-router via GameCI.
 # router depends on core, so the host project pulls core as a git dependency
 # (core is public on GitHub). See planning/CI-SETUP.md for the rest.
+# Manual-only until Unity license secrets (UNITY_LICENSE etc.) are configured in repo settings.
 on:
-  push:
-    branches: [main]
-  pull_request:
+  workflow_dispatch:
 jobs:
   tests:
     runs-on: ubuntu-latest

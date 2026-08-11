@@ -122,13 +122,13 @@ namespace Sharq.Router
 
         /// <summary>
         /// Aggregated overlay services (Modal, Transition, Console, World).
-        /// Set by Init(). TooltipService is in downstream library — use its own singleton.
+        /// Set by Init(). TooltipService lives in downstream component libraries — use its own singleton.
         /// </summary>
         public SusOverlayServices OverlayServices { get; private set; }
 
         /// <summary>
         /// Shared overlay portal for all layers (Transition, Tooltip, Modal, Console).
-        /// Set by Init() and available to external services (downstream library, Console, etc.).
+        /// Set by Init() and available to external services (component libraries, Console, etc.).
         /// </summary>
         public OverlayHost OverlayHost => OverlayServices?.Host;
 

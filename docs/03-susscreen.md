@@ -20,8 +20,7 @@ public class HomeScreen : SusScreen
         style.flexGrow = 1f;
         Add(new Label("Home"));
 
-        var btn = new SusButton();      // downstream library component
-        btn.Text.Value = "Go to About";
+        var btn = new Button { text = "Go to About" };
         btn.RegisterCallback<ClickEvent>(_ => Router.Push("/about"));
         Add(btn);
     }

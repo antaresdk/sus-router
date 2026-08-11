@@ -2,10 +2,9 @@ name: tests
 # Unity Test Runner for sus-router via GameCI.
 # router depends on core, so the host project pulls core as a git dependency
 # (core is public on GitHub). See planning/CI-SETUP.md for the rest.
+# Auto-runs paused: GitHub account billing lock blocks all Actions jobs.
+# License secret is configured; restore push/pull_request triggers once billing is resolved.
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
 jobs:
   tests:

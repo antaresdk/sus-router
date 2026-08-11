@@ -2,8 +2,10 @@ name: tests
 # Unity Test Runner for sus-router via GameCI.
 # router depends on core, so the host project pulls core as a git dependency
 # (core is public on GitHub). See planning/CI-SETUP.md for the rest.
-# Manual-only until Unity license secrets (UNITY_LICENSE etc.) are configured in repo settings.
 on:
+  push:
+    branches: [main]
+  pull_request:
   workflow_dispatch:
 jobs:
   tests:
@@ -21,7 +23,7 @@ jobs:
           {
             "dependencies": {
               "com.sharq-it.sus.router": "file:../../pkg",
-              "com.sharq-it.sus.core": "https://github.com/antaresdk/sus-core.git#v1.0.5",
+              "com.sharq-it.sus.core": "https://github.com/antaresdk/sus-core.git#v1.0.8",
               "com.unity.test-framework": "1.4.5"
             },
             "testables": ["com.sharq-it.sus.router"]
@@ -32,7 +34,6 @@ jobs:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
         with:
           projectPath: HostProject
           unityVersion: 6000.3.17f1

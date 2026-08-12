@@ -183,12 +183,12 @@ namespace Sharq.Router
             var unused = _routes.Where(r => !_usedRoutes.Contains(r)).ToList();
             if (unused.Count == 0) return;
 
-            UnityEngine.Debug.LogWarning($"[DeadRouteAudit] {unused.Count} registered routes " +
+            SusLog.Verbose($"[DeadRouteAudit] {unused.Count} registered routes " +
                 $"were never navigated to:");
             foreach (var r in unused)
             {
                 var name = !string.IsNullOrEmpty(r.Config?.Name) ? $" ({r.Config.Name})" : "";
-                UnityEngine.Debug.LogWarning($"  - {r.Path}{name}");
+                SusLog.Verbose($"  - {r.Path}{name}");
             }
         }
 #endif
@@ -408,7 +408,7 @@ namespace Sharq.Router
             if (record == null)
             {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                UnityEngine.Debug.LogWarning($"[NavigationAudit] Push('{path}') — route not found.");
+                SusLog.Verbose($"[NavigationAudit] Push('{path}') — route not found.");
 #endif
                 FireError(NavigationResult.NotFound,
                     CurrentRoute.Value ?? SusRoute.None,
@@ -424,7 +424,7 @@ namespace Sharq.Router
             if (record == null)
             {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                UnityEngine.Debug.LogWarning($"[NavigationAudit] Replace('{path}') — route not found.");
+                SusLog.Verbose($"[NavigationAudit] Replace('{path}') — route not found.");
 #endif
                 FireError(NavigationResult.NotFound,
                     CurrentRoute.Value ?? SusRoute.None,
@@ -441,7 +441,7 @@ namespace Sharq.Router
             if (!_namedRoutes.TryGetValue(name, out var record))
             {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                UnityEngine.Debug.LogWarning($"[NavigationAudit] PushNamed('{name}') — named route not found.");
+                SusLog.Verbose($"[NavigationAudit] PushNamed('{name}') — named route not found.");
 #endif
                 FireError(NavigationResult.NotFound,
                     CurrentRoute.Value ?? SusRoute.None,
@@ -466,7 +466,7 @@ namespace Sharq.Router
             if (!_namedRoutes.TryGetValue(name, out var record))
             {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                UnityEngine.Debug.LogWarning($"[NavigationAudit] ReplaceNamed('{name}') — named route not found.");
+                SusLog.Verbose($"[NavigationAudit] ReplaceNamed('{name}') — named route not found.");
 #endif
                 FireError(NavigationResult.NotFound,
                     CurrentRoute.Value ?? SusRoute.None,
@@ -589,7 +589,7 @@ namespace Sharq.Router
             if (record == null)
             {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                UnityEngine.Debug.LogWarning($"[NavigationAudit] NavigateWithTransition('{path}') — route not found.");
+                SusLog.Verbose($"[NavigationAudit] NavigateWithTransition('{path}') — route not found.");
 #endif
                 return;
             }
@@ -666,7 +666,7 @@ namespace Sharq.Router
             if (!asyncGuardsHandled
                 && (_beforeEachAsyncGuards.Count > 0 || _beforeResolveAsyncGuards.Count > 0))
             {
-                UnityEngine.Debug.LogWarning(
+                SusLog.Verbose(
                     "[GuardAudit] Sync navigation (Push/Replace/Back/Forward) skips async guards " +
                     "(BeforeEachAsync/BeforeResolveAsync). Use PushAsync/ReplaceAsync to run them.");
             }
@@ -675,7 +675,7 @@ namespace Sharq.Router
             if (_isNavigating)
             {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                UnityEngine.Debug.LogWarning($"[SusRouter] Navigation to '{toRoute?.FullPath}' dropped — router is busy (concurrent Push/Replace). Resync UI to CurrentRoute.");
+                SusLog.Warn($"[SusRouter] Navigation to '{toRoute?.FullPath}' dropped — router is busy (concurrent Push/Replace). Resync UI to CurrentRoute.");
 #endif
                 return NavigationResult.Busy;
             }
@@ -697,7 +697,7 @@ namespace Sharq.Router
 #endif
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
                 if (result == NavigationResult.Aborted)
-                    UnityEngine.Debug.LogWarning($"[GuardAudit] Nav from '{fromRoute.FullPath}' " +
+                    SusLog.Verbose($"[GuardAudit] Nav from '{fromRoute.FullPath}' " +
                         $"→ '{toRoute.FullPath}' was rejected by a guard or lifecycle hook " +
                         $"(BeforeLeave/CanLeave/BeforeEach/CanEnter/BeforeResolve/BeforeEnter).");
 #endif
@@ -963,7 +963,7 @@ namespace Sharq.Router
                 }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
                 else if (MaxHistory <= 0 && _history.Count > 50)
-                    UnityEngine.Debug.LogWarning($"[StackDepthAudit] Router history has {_history.Count} entries " +
+                    SusLog.Verbose($"[StackDepthAudit] Router history has {_history.Count} entries " +
                         $"and MaxHistory is unbounded (<= 0). Possible circular navigation or unbounded " +
                         $"stack growth. Consider using Replace() instead of Push(), or set Router.MaxHistory.");
 #endif
@@ -1052,7 +1052,7 @@ namespace Sharq.Router
             var modal = ModalService?.Show(dialogType, props);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             if (modal == null)
-                UnityEngine.Debug.LogWarning($"[SusRouter.Modal] Failed to show modal '{dialogType.Name}'. Check OverlayHost init and MaxModalDepth.");
+                SusLog.Warn($"[SusRouter.Modal] Failed to show modal '{dialogType.Name}'. Check OverlayHost init and MaxModalDepth.");
 #endif
         }
 
@@ -1084,7 +1084,7 @@ namespace Sharq.Router
             if (_isInitialized)
             {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                UnityEngine.Debug.LogWarning("[SusRouter] Init() called more than once — no-op. " +
+                SusLog.Warn("[SusRouter] Init() called more than once — no-op. " +
                     "This is harmless but indicates a duplicate Init() call in bootstrapping code. " +
                     "Prefer calling Init() once before Mount(), or let Mount() call Init() internally.");
 #endif

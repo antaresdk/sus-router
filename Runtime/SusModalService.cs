@@ -60,12 +60,12 @@ namespace Sharq.Router
                 throw new ArgumentException($"Modal type {modalType.Name} must inherit SusRouterModal", nameof(modalType));
             if (OverlayHost == null)
             {
-                Debug.LogError("[SusModalService] OverlayHost is null. Call Router.Init(overlayHost) first.");
+                SusLog.Error("[SusModalService] OverlayHost is null. Call Router.Init(overlayHost) first.");
                 return null;
             }
             if (MaxModalDepth > 0 && _stack.Count >= MaxModalDepth)
             {
-                Debug.LogWarning($"[SusModalService] MaxModalDepth ({MaxModalDepth}) exceeded. " +
+                SusLog.Warn($"[SusModalService] MaxModalDepth ({MaxModalDepth}) exceeded. " +
                     $"Rejecting Show({modalType.Name}). Close existing modals first.");
                 return null;
             }

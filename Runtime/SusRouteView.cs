@@ -96,7 +96,7 @@ namespace Sharq.Router
                 if (childView == null)
                 {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                    UnityEngine.Debug.LogWarning(
+                    SusLog.Warn(
                         $"[NestedRouting] Screen '{parent.GetType().Name}' has no registered " +
                         $"ChildView — nested child '{child.GetType().Name}' cannot mount. " +
                         $"Add a <SusRouteView> to the parent template or call RegisterChildView().");

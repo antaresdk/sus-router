@@ -122,7 +122,7 @@ namespace Sharq.Router
             try { return (T)System.Convert.ChangeType(val, typeof(T)); }
             catch (System.Exception ex)
             {
-                UnityEngine.Debug.LogWarning($"[GetProp] Cannot convert route prop '{key}' from {val?.GetType().Name ?? "null"} to {typeof(T).Name}: {ex.Message}. Using default ({defaultValue}).");
+                SusLog.Warn($"[GetProp] Cannot convert route prop '{key}' from {val?.GetType().Name ?? "null"} to {typeof(T).Name}: {ex.Message}. Using default ({defaultValue}).");
                 return defaultValue;
             }
         }

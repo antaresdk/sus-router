@@ -1,9 +1,10 @@
 {
   "name": "com.sharq-it.sus.router",
   "version": "1.0.7",
-  "displayName": "SusRouter",
+  "displayName": "Sharq UI System Router",
   "description": "Vue Router-like navigation: full guard pipeline (beforeEach/beforeResolve), query params, lazy loading, named/nested routes, redirect/alias, cursor-based history, SusRouteLink, modals, KeepAlive. Depends only on sus-core.",
-  "unity": "6000.0",
+  "unity": "6000.3",
+  "unityRelease": "17f1",
   "license": "MIT",
   "author": {
     "name": "Sharq IT",

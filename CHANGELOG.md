@@ -5,6 +5,16 @@ All notable changes to this package are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.9] - 2026-08-16
+
+### Fixed
+- Sample asmdefs (all 7 samples) are `autoReferenced: false` — a project's `Assembly-CSharp` no
+  longer implicitly references sample code.
+
+### Changed
+- Package push gate is versioned in `scripts~/pre-push` (docs check for this package + hard version
+  bump), identical across the SUS packages; docs re-stamped (sus-core 1.0.16).
+
 ## [1.0.8] - 2026-08-13
 
 ### Fixed

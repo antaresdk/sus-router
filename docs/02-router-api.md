@@ -2,7 +2,7 @@
 
 ## Prefer `SusApp.UseRouter`
 
-Extension in `Runtime/SusAppRouterExtensions.cs` — registers routes and mounts at the correct ` SusApp`finalization point:
+Extension in `Runtime/SusAppRouterExtensions.cs` — registers routes and mounts at the correct `SusApp` finalization point:
 
 ```csharp
 SusApp.Create(doc)
@@ -115,7 +115,7 @@ public class SusRouteConfig
 
 ## Navigation stack
 
-Cursor-based history with `_historyIndex`. Cap via ` MaxHistory` (default **100**): on Push overflow, oldest entries are evicted. ` MaxHistory <= 0`means unlimited (dev builds warn on unbounded growth).
+Cursor-based history with `_historyIndex`. Cap via `MaxHistory` (default **100**): on Push overflow, oldest entries are evicted. `MaxHistory <= 0` means unlimited (dev builds warn on unbounded growth).
 
 - Push(/battle) → [.../home, .../about, .../battle] idx=2
 - Back() → [.../home, .../about] idx=1
@@ -141,7 +141,7 @@ Step 10:  CurrentRoute + AfterEach
 
 ### Re-entrancy — Busy drop (no pending queue)
 
-While a navigation is in progress (`_isNavigating`), a concurrent ` Push` / ` Replace` / ` Back` / ` Forward` **returns ` NavigationResult.Busy`and is dropped**. There is **no** `_pendingNavigation` queue.
+While a navigation is in progress (`_isNavigating`), a concurrent `Push` / `Replace` / `Back` / `Forward` **returns `NavigationResult.Busy` and is dropped**. There is **no** `_pendingNavigation` queue.
 
 Callers (e.g. tab handlers) should not auto-retry; resync UI to `CurrentRoute` after the active navigation completes.
 
@@ -155,7 +155,7 @@ if (result == NavigationResult.Busy)
 
 ### Async guards
 
-`BeforeEachAsync` / ` BeforeResolveAsync`run only on ` PushAsync` / ` ReplaceAsync`. Sync ` Push`/` Replace`/` Back`/` Forward`skip them (dev builds warn). Async guards are awaited first, then the sync pipeline runs.
+`BeforeEachAsync` / `BeforeResolveAsync` run only on `PushAsync` / `ReplaceAsync`. Sync `Push`/`Replace`/`Back`/`Forward` skip them (dev builds warn). Async guards are awaited first, then the sync pipeline runs.
 
 ## Named routes
 
@@ -200,9 +200,9 @@ router.Register("/lazy", null, new SusRouteConfig { LazyFactory = () => new MySc
 
 ## KeepAlive (router off-DOM cache)
 
-`SusRouteConfig.KeepAlive = true` caches the screen instance in `SusRouteView` / ` SusScreenOutlet` **off the DOM** (detach → cache → re-attach on return). This is **not** core ` SusKeepAlive` (display:none wrapper).
+`SusRouteConfig.KeepAlive = true` caches the screen instance in `SusRouteView` / `SusScreenOutlet` **off the DOM** (detach → cache → re-attach on return). This is **not** the core `SusKeepAlive` (display:none wrapper).
 
-- Leave: DOM-detach → `Unmounted()`; ` Left()`is **not** called (instance stays alive).
-- Return: retrieve from cache → `Mounted()` + ` Entered()`.
-- LRU eviction / `ClearKeepAliveCache`: ` OnScreenEvicted` → ` Left()`.
-- Cache key: `KeepAliveKey(route)` (` FullPath`, or path without query if ` KeepAliveIgnoreQuery`).
+- Leave: DOM-detach → `Unmounted()`; `Left()` is **not** called (instance stays alive).
+- Return: retrieve from cache → `Mounted()` + `Entered()`.
+- LRU eviction / `ClearKeepAliveCache`: `OnScreenEvicted` → `Left()`.
+- Cache key: `KeepAliveKey(route)` (`FullPath`, or path without query if `KeepAliveIgnoreQuery`).

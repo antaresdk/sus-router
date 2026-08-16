@@ -1,8 +1,8 @@
 ﻿# 3. SusScreen — screens, lifecycle, and wiring
 
-A screen (`SusScreen`) is a full-screen view managed by ` SusRouter`.
+A screen (`SusScreen`) is a full-screen view managed by `SusRouter`.
 It inherits `SusComponent`, so it has the full core reactive toolkit
-(`Prop<T>`, ` Watch`, ` Build()`, ` Mounted()`), plus router lifecycle and access
+(`Prop<T>`, `Watch`, `Build()`, `Mounted()`), plus router lifecycle and access
 to route parameters.
 
 ---
@@ -27,8 +27,8 @@ public class HomeScreen : SusScreen
 }
 ```
 
-`Build()` builds the tree (from `SusComponent`). ` Router`and ` Props`are
-**not** set yet in `Build()` — read them from ` OnBeforeEnter()` / ` OnEntered()`.
+`Build()` builds the tree (from `SusComponent`). `Router` and `Props` are
+**not** set yet in `Build()` — read them from `OnBeforeEnter()` / `OnEntered()`.
 
 ---
 
@@ -36,7 +36,7 @@ public class HomeScreen : SusScreen
 
 > ⚠️ Important: public `BeforeEnter/Entered/BeforeLeave/Left/BeforeRouteUpdate`
 > are called by **the router itself** — do not override them. Override the
-> **`protected virtual` ` On*`hooks** (template-method pattern).
+> **`protected virtual` `On*` hooks** (template-method pattern).
 
 ```csharp
 public class BattleScreen : SusScreen
@@ -92,7 +92,7 @@ Leave:
 ```
 
 With **KeepAlive** the screen is not recreated: `OnLeft()` runs, but the instance
-is hidden (not destroyed); on return — `OnBeforeEnter()` / ` OnEntered()`again
+is hidden (not destroyed); on return — `OnBeforeEnter()` / `OnEntered()` again
 without a new `Build()`.
 
 ---
@@ -112,11 +112,11 @@ object raw = GetProp("payload");      // untyped
 
 | Member | Type | Purpose |
 |---|---|---|
-| `Router` | ` SusRouter` | screen owner (navigation, modals) |
-| `Props` | ` Dictionary<string,object>` | params + query + passed props (never null) |
-| `IsActive` | ` bool` | whether the screen is active now |
-| `GetProp<T>(key, def)` | ` T` | typed read with conversion |
-| `GetParam(key, def)` / ` GetQuery(key, def)` | ` string` | aliases into ` Props` (params/query already merged) |
+| `Router` | `SusRouter` | screen owner (navigation, modals) |
+| `Props` | `Dictionary<string,object>` | params + query + passed props (never null) |
+| `IsActive` | `bool` | whether the screen is active now |
+| `GetProp<T>(key, def)` | `T` | typed read with conversion |
+| `GetParam(key, def)` / `GetQuery(key, def)` | `string` | aliases into `Props` (params/query already merged) |
 
 ---
 
@@ -153,7 +153,7 @@ SusApp.Create(uiDocument)
       .Run();
 ```
 
-### 4.3 Imperative `UseRouter` (Register inside ` SusApp`)
+### 4.3 Imperative `UseRouter` (Register inside `SusApp`)
 
 ```csharp
 SusApp.Create(uiDocument)
@@ -174,20 +174,20 @@ point (after token cascade / custom styles, before theme apply).
 
 | Option | Type | What it does |
 |---|---|---|
-| `Name` | ` string` | name for ` PushNamed`/` ReplaceNamed` |
-| `KeepAlive` | ` bool` | do not recreate screen on leave (instance cache) |
-| `Alias` | ` List<string>` | extra paths that resolve to this route |
-| `Children` | ` List<SusRouteRecord>` | nested routes (one level) |
-| `Redirect` | ` string` | on enter — navigate here instead of this route |
-| `DefaultProps` | ` Dictionary<string,object>` | default props for the screen |
-| `PropsFn` | ` Func<SusRoute, Dictionary<string,object>>` | props generator from the route (Vue analog ` props: route => ({...})`) |
-| `LazyFactory` | ` Func<SusScreen>` | lazy screen creation (instead of ` Activator.CreateInstance`) |
-| `Guard` | ` ISusRouteGuard` | per-route guard ` CanEnter`/` CanLeave` |
-| `BeforeEnter` | ` SusRouterGuard` | functional enter guard (after ` Guard.CanEnter`) |
-| `Transition` | ` SusRouteTransition` | transition animation (` Fade()`, ` SlideLeft()`, …) |
-| `Meta` | ` Dictionary<string,object>` | arbitrary metadata (` requiresAuth`, ` title`) |
-| `CaseSensitive` | ` bool` | case-sensitive path matching (default off) |
-| `Strict` | ` bool` | trailing slash matters (`/a` ≠ `/a/`) |
+| `Name` | `string` | name for `PushNamed`/`ReplaceNamed` |
+| `KeepAlive` | `bool` | do not recreate screen on leave (instance cache) |
+| `Alias` | `List<string>` | extra paths that resolve to this route |
+| `Children` | `List<SusRouteRecord>` | nested routes (one level) |
+| `Redirect` | `string` | on enter — navigate here instead of this route |
+| `DefaultProps` | `Dictionary<string,object>` | default props for the screen |
+| `PropsFn` | `Func<SusRoute, Dictionary<string,object>>` | props generator from the route (Vue analog `props: route => ({...})`) |
+| `LazyFactory` | `Func<SusScreen>` | lazy screen creation (instead of `Activator.CreateInstance`) |
+| `Guard` | `ISusRouteGuard` | per-route guard `CanEnter`/`CanLeave` |
+| `BeforeEnter` | `SusRouterGuard` | functional enter guard (after `Guard.CanEnter`) |
+| `Transition` | `SusRouteTransition` | transition animation (`Fade()`, `SlideLeft()`, …) |
+| `Meta` | `Dictionary<string,object>` | arbitrary metadata (`requiresAuth`, `title`) |
+| `CaseSensitive` | `bool` | case-sensitive path matching (default off) |
+| `Strict` | `bool` | trailing slash matters (`/a` ≠ `/a/`) |
 
 ### Examples for each option
 
@@ -240,11 +240,11 @@ var users = router.Register("/users", typeof(UsersScreen), new SusRouteConfig
 | `Replace(path, props?)` | replace current entry |
 | `PushNamed(name, pathParams?, props?)` | navigate by route name |
 | `ReplaceNamed(name, pathParams?, props?)` | replace by name |
-| `Back()` / ` Forward()` | history (cursor-based) |
-| `Go(n)` | offset by ` n`steps |
+| `Back()` / `Forward()` | history (cursor-based) |
+| `Go(n)` | offset by `n` steps |
 | `NavigateWithTransition(path, …)` | navigate with an explicit animation |
-| `CanGoBack` / ` CanGoForward` | history availability (for buttons) |
-| `Modal(type, props?)` / ` CloseModal()` | modals via ` ModalService` |
+| `CanGoBack` / `CanGoForward` | history availability (for buttons) |
+| `Modal(type, props?)` / `CloseModal()` | modals via `ModalService` |
 
 All `Push*/Replace*/Back/Forward/Go` return `NavigationResult` (success /
 guard abort / redirect).
@@ -276,7 +276,7 @@ public class UsersScreen : SusScreen
 }
 ```
 
-`ChildView` (first) and ` ChildViews` (all) are available from code. Chain
+`ChildView` (first) and `ChildViews` (all) are available from code. Chain
 resolving picks the `MatchedChain` of records from root to leaf.
 
 ---
@@ -311,8 +311,8 @@ public class AppEntry : MonoBehaviour
 
 - `OnEntered()` is called **before** `Mounted()`. Put logic that needs children
   not present at `Build()` time into `Mounted()`.
-- `Router`/` Props`are available from ` OnBeforeEnter()`, but **not** in ` Created()`/` Build()`.
-- `Unmounted()` — on detach from the panel (after ` OnLeft()`); with KeepAlive
+- `Router`/`Props` are available from `OnBeforeEnter()`, but **not** in `Created()`/`Build()`.
+- `Unmounted()` — on detach from the panel (after `OnLeft()`); with KeepAlive
   the screen is hidden and `Unmounted()` is not called.
 
 ## Related docs

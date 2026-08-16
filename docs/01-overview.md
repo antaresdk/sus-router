@@ -22,7 +22,7 @@ SusRouter is the **navigation layer** for SUS. It extracts routing from a monoli
 
 ## Quick start
 
-Prefer **`SusApp` + ` UseRouter`** (` Runtime/SusAppRouterExtensions.cs`):
+Prefer **`SusApp` + `UseRouter`** (`Runtime/SusAppRouterExtensions.cs`):
 
 ```csharp
 using Sharq.Core;
@@ -38,7 +38,7 @@ SusApp.Create(uiDocument)
     .Run();
 ```
 
-See [02-router-api.md](./02-router-api.md) for the full API (`ReplaceNamed`, ` HasRoute`, ` RemoveRoute`, ` Busy`, ` MaxHistory`, async guards).
+See [02-router-api.md](./02-router-api.md) for the full API (`ReplaceNamed`, `HasRoute`, `RemoveRoute`, `Busy`, `MaxHistory`, async guards).
 
 ## Ecosystem
 

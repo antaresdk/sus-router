@@ -69,13 +69,13 @@ router.BeforeResolveAsync(async (from, to) =>
 });
 ```
 
-Order on `PushAsync` / ` ReplaceAsync`:
+Order on `PushAsync` / `ReplaceAsync`:
 
-1. `BeforeEachAsync` (all, sequentially, ` await`)
-2. `BeforeResolveAsync` (all, sequentially, ` await`)
-3. sync pipeline (`BeforeLeave` → ` BeforeEach` → ` CanEnter` → ` BeforeResolve` → screen creation)
+1. `BeforeEachAsync` (all, sequentially, `await`)
+2. `BeforeResolveAsync` (all, sequentially, `await`)
+3. sync pipeline (`BeforeLeave` → `BeforeEach` → `CanEnter` → `BeforeResolve` → screen creation)
 
-> ⚠️ **Limitation:** sync navigation (`Push` / ` Replace` / ` Back` / ` Forward`) **does not run** async guards — they cannot be ` await`ed synchronously. If async guards are registered but sync ` Push`is called, they are **skipped** (Editor/Development builds log a `[GuardAudit]` warning). For routes with async checks, use `PushAsync` / ` ReplaceAsync`.
+> ⚠️ **Limitation:** sync navigation (`Push` / `Replace` / `Back` / `Forward`) **does not run** async guards — they cannot be `await`ed synchronously. If async guards are registered but sync `Push` is called, they are **skipped** (Editor/Development builds log a `[GuardAudit]` warning). For routes with async checks, use `PushAsync` / `ReplaceAsync`.
 
 ## SusRouteTransition — transition animations
 
@@ -97,7 +97,7 @@ public class SusRouteTransition
 
 ### Implementation (code-based)
 
-Animations use `schedule.Execute` plus `style.opacity` / ` style.translate`manipulation:
+Animations use `schedule.Execute` plus `style.opacity` / `style.translate` manipulation:
 
 ```csharp
 public static SusRouteTransition Fade(float d = 0.2f) => new(
@@ -122,4 +122,4 @@ new SusRouteConfig { Transition = SusRouteTransition.SlideRight(0.3f) }
 new SusRouteConfig { Transition = SusRouteTransition.None() }
 ```
 
-Animations play in `SusRouteView.OnRouteChanged`: ` PlayOut`on the old screen, ` PlayIn`on the new one.
+Animations play in `SusRouteView.OnRouteChanged`: `PlayOut` on the old screen, `PlayIn` on the new one.

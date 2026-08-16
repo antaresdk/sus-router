@@ -36,7 +36,7 @@
 
 ### A.1 `router.go(n)` and `router.forward()`
 
-Cursor history with `_historyIndex`. ` Push`truncates the forward tail. ` CanGoBack` / ` CanGoForward`.
+Cursor history with `_historyIndex`. `Push` truncates the forward tail. `CanGoBack` / `CanGoForward`.
 
 ### A.2 `beforeRouteUpdate`
 
@@ -44,21 +44,21 @@ Update params on the same route without recreating the screen.
 
 ### A.3 `router-link` / active-link
 
-`SusRouteLink` — declarative navigation with ` router-link-active` / ` router-link-exact-active`classes. ` IsRouteActive` / ` IsRouteActiveExact`.
+`SusRouteLink` — declarative navigation with `router-link-active` / `router-link-exact-active` classes. `IsRouteActive` / `IsRouteActiveExact`.
 
 ## Phase B — DX improvements ✅
 
 ### B.1 Named routes
 
-`PushNamed` / ` ReplaceNamed` / ` ResolvePath`. `_namedRoutes` dictionary. `SusRouteConfig.Name`.
+`PushNamed` / `ReplaceNamed` / `ResolvePath`. `_namedRoutes` dictionary. `SusRouteConfig.Name`.
 
 ### B.2 Nested routes
 
-`SusRouteConfig.Children`. Path concatenation. ` SusRouteRecord.Parent`. Resolve by name.
+`SusRouteConfig.Children`. Path concatenation. `SusRouteRecord.Parent`. Resolve by name.
 
 ### B.3 Redirect and alias
 
-`SusRouteConfig.Redirect` / ` Alias`. `_aliasMap` for fast lookup. Redirect handled in `Navigate`.
+`SusRouteConfig.Redirect` / `Alias`. `_aliasMap` for fast lookup. Redirect handled in `Navigate`.
 
 ## Phase C — nice-to-have ✅
 
@@ -70,11 +70,11 @@ Global guard. Called BEFORE `BeforeEnter`/screen creation (step 5.5 in NavigateC
 
 ### C.2 Query params
 
-Parsing `?key=val&key2=val2`. ` SusRoute.Query` — ` Dictionary<string, string>`. ` Resolve`and ` IsRouteActive`ignore query. ` IsRouteActiveExact` — exact.
+Parsing `?key=val&key2=val2`. `SusRoute.Query` — `Dictionary<string, string>`. `Resolve` and `IsRouteActive` ignore query. `IsRouteActiveExact` — exact.
 
 ### C.3 Lazy loading
 
-`SusRouteConfig.LazyFactory` — ` Func<SusScreen>`. ` Register`allows null screenType. Called once.
+`SusRouteConfig.LazyFactory` — `Func<SusScreen>`. `Register` allows null screenType. Called once.
 
 ## Summary
 

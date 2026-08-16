@@ -15,12 +15,12 @@
 | **SusRouteTransition** | Code-based transition animation: Fade/SlideLeft/SlideRight/None, PlayIn/PlayOut |
 | **SusOverlayServices** | Aggregation: Host, Modal, Transition — single access point to overlay services |
 | **ISusRouteGuard** | Per-route guard interface: CanEnter(from, to), CanLeave(from, to) |
-| **KeepAlive** | Route mode (`SusRouteConfig.KeepAlive=true`): screen is detached and cached off-DOM by ` SusRouteView`/` SusScreenOutlet` (not core ` SusKeepAlive`) |
+| **KeepAlive** | Route mode (`SusRouteConfig.KeepAlive=true`): screen is detached and cached off-DOM by `SusRouteView`/`SusScreenOutlet` (not core `SusKeepAlive`) |
 | **LRU cache** | Least Recently Used: when `MaxKeepAlive` is exceeded, the oldest inactive screen is evicted (`Left()`) |
 | **Re-entrancy protection** | `_isNavigating` flag; concurrent navigation returns `NavigationResult.Busy` and is dropped (no pending queue) |
 | **Busy** | `NavigationResult.Busy` — router already navigating; request discarded |
 | **MaxHistory** | Cap on history stack entries (default 100); overflow evicts oldest on Push |
-| **UseRouter** | `SusApp` extension (`SusAppRouterExtensions`): configure + ` Mount`at the correct finalization point |
+| **UseRouter** | `SusApp` extension (`SusAppRouterExtensions`): configure + `Mount` at the correct finalization point |
 | **OverlayHost** | Container from sus-core for overlay Z-order (Modal, Transition, Tooltip, etc.) |
 | **Named route** | Route with SusRouteConfig.Name — navigate via PushNamed("name", pathParams) |
 | **Nested route** | Child route (SusRouteConfig.Children) with Parent = parent path |

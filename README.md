@@ -6,14 +6,16 @@
   <img src="Documentation~/images/readme-banner.png" width="1280" height="640" alt="Sharq UI System Router — screens, guards, keep-alive and modals for Unity UI Toolkit">
 </p>
 
-# SUS Router (`com.sharq-it.sus.router`)
+# Sharq UI System Router
 
-Navigation for SUS — a **vue-router** analog for Unity UI Toolkit. Screens, nested routes,
+**SUS Router** (`com.sharq-it.sus.router`) — navigation for SUS, a **vue-router** analog for Unity UI Toolkit. Screens, nested routes,
 guards, keep-alive, modals, and transitions on top of `sus-core`.
 
 **License:** [MIT](./LICENSE.md)
 
-**Community & support:** [Discord](https://discord.gg/gwS9nwqWWj) · [Telegram](https://t.me/sus_public)
+**Community & support:** [support@sus-ui.dev](mailto:support@sus-ui.dev) · [Discord](https://discord.gg/gwS9nwqWWj) · [Telegram](https://t.me/sus_public)
+
+**Tests & releases:** 169 automated tests · [CHANGELOG](./CHANGELOG.md) · [GitHub Releases](https://github.com/antaresdk/sus-router/releases)
 
 <!-- sus:gen ver pkg=sus-router -->
 > **Version:** 1.0.11 · **Namespace:** `Sharq.Router` · **Depends on:** `com.sharq-it.sus.core` (^1.0.0) <!-- sus:ok dependency range -->

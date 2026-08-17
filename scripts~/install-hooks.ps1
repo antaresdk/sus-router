@@ -54,6 +54,17 @@ if (-not (Test-Path $prePushSrc)) {
 $text = [System.IO.File]::ReadAllText($prePushSrc) -replace "`r`n", "`n" -replace "`r", "`n"
 [System.IO.File]::WriteAllText($prePushDst, $text, (New-Object System.Text.UTF8Encoding $false))
 
+# prepare-commit-msg: strips Cursor co-author trailers. Copied AS-IS for the same reason as
+# pre-push, and it is /bin/sh on purpose (T-646): the former PowerShell script decoded the message
+# file with the system ANSI code page and wrote the mis-decoded characters back, so every
+# non-ASCII commit message reached the real git object corrupted.
+$prepareSrc = Join-Path $scriptDir "prepare-commit-msg"
+$prepareDst = Join-Path $hooksDir "prepare-commit-msg"
+if (Test-Path $prepareSrc) {
+    $text = [System.IO.File]::ReadAllText($prepareSrc) -replace "`r`n", "`n" -replace "`r", "`n"
+    [System.IO.File]::WriteAllText($prepareDst, $text, (New-Object System.Text.UTF8Encoding $false))
+}
+
 Write-Host ""
 Write-Host "Git hooks installed:" -ForegroundColor Green
 Write-Host "  pre-commit  ->  scripts~/pre-commit.ps1  (auto-generate .meta)" -ForegroundColor Green

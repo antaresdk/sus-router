@@ -8,7 +8,7 @@ guards, keep-alive, modals, and transitions on top of `sus-core`.
 **Community & support:** [Discord](https://discord.gg/gwS9nwqWWj) · [Telegram](https://t.me/sus_public)
 
 <!-- sus:gen ver pkg=sus-router -->
-> **Version:** 1.0.10 · **Namespace:** `Sharq.Router` · **Depends on:** `com.sharq-it.sus.core` (^1.0.0) <!-- sus:ok dependency range -->
+> **Version:** 1.0.11 · **Namespace:** `Sharq.Router` · **Depends on:** `com.sharq-it.sus.core` (^1.0.0) <!-- sus:ok dependency range -->
 <!-- /sus:gen -->
 
 ## Requirements
@@ -85,3 +85,4 @@ Router types live in `Sharq.Router` (after the P1.4 refactor). Import both names
 - Package docs: [`docs/README.md`](docs/README.md)
 - SUS core: [`sus-core/Docs/README.md`](../sus-core/Docs/README.md)
 - Integration pitfalls: [`sus-core/Docs/SUS_INTEGRATION_KNOWN_ISSUES.md`](../sus-core/Docs/SUS_INTEGRATION_KNOWN_ISSUES.md)
+- Public demo (cloneable runtime example): [sus-demo-public](https://github.com/antaresdk/sus-demo-public)

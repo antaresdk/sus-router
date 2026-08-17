@@ -6,7 +6,7 @@ guards, keep-alive, modals, and transitions on top of `sus-core`.
 **Community & support:** [Discord](https://discord.gg/gwS9nwqWWj) · [Telegram](https://t.me/sus_public)
 
 <!-- sus:gen ver pkg=sus-router -->
-> **Version:** 1.0.9 · **Namespace:** `Sharq.Router` · **Depends on:** `com.sharq-it.sus.core` (^1.0.0) <!-- sus:ok dependency range -->
+> **Version:** 1.0.10 · **Namespace:** `Sharq.Router` · **Depends on:** `com.sharq-it.sus.core` (^1.0.0) <!-- sus:ok dependency range -->
 <!-- /sus:gen -->
 
 ## Quick start (via `SusApp`)

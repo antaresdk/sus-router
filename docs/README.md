@@ -2,7 +2,7 @@
 
 <!-- sus:gen ver pkg=sus-router -->
 > **Package:** `com.sharq-it.sus.router`  
-> **Version:** 1.0.10  
+> **Version:** 1.0.11  
 <!-- /sus:gen -->
 > **SUS UI router** — Vue Router analog: navigation, screens, modals, KeepAlive, transitions
 

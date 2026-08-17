@@ -5,6 +5,13 @@ All notable changes to this package are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.11] - 2026-08-18
+
+### Changed
+- README: first-touch section (requirements and scope bounds).
+- Versioned hooks: `scripts~/pre-push` / `scripts~/prepare-commit-msg` carry the attribution
+  guard (no AI trailers in the pushed range); docs re-stamped (sus-core 1.0.18).
+
 ## [1.0.10] - 2026-08-17
 
 ### Changed

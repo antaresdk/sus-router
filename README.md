@@ -18,7 +18,7 @@ guards, keep-alive, modals, and transitions on top of `sus-core`.
 **Tests & releases:** 169 automated tests · [CHANGELOG](./CHANGELOG.md) · [GitHub Releases](https://github.com/antaresdk/sus-router/releases) <!-- sus:ok -->
 
 <!-- sus:gen ver pkg=sus-router -->
-> **Version:** 1.0.12 · **Namespace:** `Sharq.Router` · **Depends on:** `com.sharq-it.sus.core` (^1.0.0) <!-- sus:ok dependency range -->
+> **Version:** 1.0.13 · **Namespace:** `Sharq.Router` · **Depends on:** `com.sharq-it.sus.core` (^1.0.0) <!-- sus:ok dependency range -->
 <!-- /sus:gen -->
 
 ## Requirements

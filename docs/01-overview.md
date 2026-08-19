@@ -1,7 +1,7 @@
 # 1. Package overview
 
 <!-- sus:gen ver pkg=sus-router -->
-> **Package:** `com.sharq-it.sus.router` · **Version:** 1.0.12 · **Analog:** Vue Router
+> **Package:** `com.sharq-it.sus.router` · **Version:** 1.0.13 · **Analog:** Vue Router
 <!-- /sus:gen -->
 
 ## Purpose

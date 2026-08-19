@@ -5,6 +5,13 @@ All notable changes to this package are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.13] - 2026-08-19
+
+### Changed
+- `Samples~` examples wrapped in the `Sharq.Router.Examples` namespace (Asset Store Validator
+  "Type Namespaces") (T-659).
+- Docs stamps: install URLs pinned to core 1.0.21 / router 1.0.13.
+
 ## [1.0.12] - 2026-08-19
 
 ### Changed

@@ -410,12 +410,9 @@ namespace Sharq.Router
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
                 SusLog.Verbose($"[NavigationAudit] Push('{path}') — route not found.");
 #endif
-                FireError(NavigationResult.NotFound,
-                    CurrentRoute.Value ?? SusRoute.None,
-                    new SusRoute(null, path, null));
-                return NavigationResult.NotFound;
+                return FireNotFound(path);
             }
-            return PushRecord(record, path, props);
+            return NavigateToRecord(record, path, props, isReplace: false);
         }
 
         public NavigationResult Replace(string path, Dictionary<string, object> props = null)
@@ -426,12 +423,9 @@ namespace Sharq.Router
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
                 SusLog.Verbose($"[NavigationAudit] Replace('{path}') — route not found.");
 #endif
-                FireError(NavigationResult.NotFound,
-                    CurrentRoute.Value ?? SusRoute.None,
-                    new SusRoute(null, path, null));
-                return NavigationResult.NotFound;
+                return FireNotFound(path);
             }
-            return ReplaceRecord(record, path, props);
+            return NavigateToRecord(record, path, props, isReplace: true);
         }
 
         public NavigationResult PushNamed(string name,
@@ -443,20 +437,12 @@ namespace Sharq.Router
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
                 SusLog.Verbose($"[NavigationAudit] PushNamed('{name}') — named route not found.");
 #endif
-                FireError(NavigationResult.NotFound,
-                    CurrentRoute.Value ?? SusRoute.None,
-                    new SusRoute(null, name, null));
-                return NavigationResult.NotFound;
+                return FireNotFound(name);
             }
             var path = BuildPath(record, pathParams);
             if (path == null)
-            {
-                FireError(NavigationResult.NotFound,
-                    CurrentRoute.Value ?? SusRoute.None,
-                    new SusRoute(null, name, null));
-                return NavigationResult.NotFound;
-            }
-            return PushRecord(record, path, props);
+                return FireNotFound(name);
+            return NavigateToRecord(record, path, props, isReplace: false);
         }
 
         public NavigationResult ReplaceNamed(string name,
@@ -468,20 +454,12 @@ namespace Sharq.Router
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
                 SusLog.Verbose($"[NavigationAudit] ReplaceNamed('{name}') — named route not found.");
 #endif
-                FireError(NavigationResult.NotFound,
-                    CurrentRoute.Value ?? SusRoute.None,
-                    new SusRoute(null, name, null));
-                return NavigationResult.NotFound;
+                return FireNotFound(name);
             }
             var path = BuildPath(record, pathParams);
             if (path == null)
-            {
-                FireError(NavigationResult.NotFound,
-                    CurrentRoute.Value ?? SusRoute.None,
-                    new SusRoute(null, name, null));
-                return NavigationResult.NotFound;
-            }
-            return ReplaceRecord(record, path, props);
+                return FireNotFound(name);
+            return NavigateToRecord(record, path, props, isReplace: true);
         }
 
         public string ResolvePath(string name, Dictionary<string, string> pathParams = null)
@@ -491,38 +469,57 @@ namespace Sharq.Router
             return BuildPath(record, pathParams);
         }
 
-        private NavigationResult PushRecord(SusRouteRecord record, string path,
-            Dictionary<string, object> props)
+        /// <summary>
+        /// Fires a NotFound navigation error for <paramref name="pathOrName"/> (a path
+        /// for Push/Replace/PushAsync/ReplaceAsync, a route name for PushNamed/ReplaceNamed)
+        /// and returns NavigationResult.NotFound. Shared NotFound-reporting shape used by
+        /// every navigation entry point.
+        /// </summary>
+        private NavigationResult FireNotFound(string pathOrName)
         {
-            var pathParams = record.Match(path);
-            if (pathParams == null && record.ParamNames.Count > 0)
-                return NavigationResult.NotFound;
-
-            var toRoute = new SusRoute(record, path, pathParams)
-            {
-                MatchedChain = ResolveChain(path) ?? new List<SusRouteRecord> { record }
-            };
-            toRoute.Props = BuildMergedProps(record, toRoute, props);
-
-            var fromRoute = CurrentRoute.Value ?? SusRoute.None;
-            return Navigate(fromRoute, toRoute, isReplace: false, stepOffset: 0);
+            FireError(NavigationResult.NotFound,
+                CurrentRoute.Value ?? SusRoute.None,
+                new SusRoute(null, pathOrName, null));
+            return NavigationResult.NotFound;
         }
 
-        private NavigationResult ReplaceRecord(SusRouteRecord record, string path,
-            Dictionary<string, object> props)
+        /// <summary>
+        /// Resolves route params for <paramref name="record"/>/<paramref name="path"/>, builds
+        /// the target SusRoute (MatchedChain + merged Props), and reports NotFound when the
+        /// path params don't match the record. Shared route-build step used by every
+        /// navigation entry point (sync and async).
+        /// </summary>
+        private bool TryBuildToRoute(SusRouteRecord record, string path,
+            Dictionary<string, object> props, out SusRoute toRoute)
         {
             var pathParams = record.Match(path);
             if (pathParams == null && record.ParamNames.Count > 0)
-                return NavigationResult.NotFound;
+            {
+                FireNotFound(path);
+                toRoute = null;
+                return false;
+            }
 
-            var toRoute = new SusRoute(record, path, pathParams)
+            toRoute = new SusRoute(record, path, pathParams)
             {
                 MatchedChain = ResolveChain(path) ?? new List<SusRouteRecord> { record }
             };
             toRoute.Props = BuildMergedProps(record, toRoute, props);
+            return true;
+        }
+
+        /// <summary>
+        /// Builds the target route from an already-resolved record and runs it through the
+        /// sync guard pipeline. Shared by Push/Replace/PushNamed/ReplaceNamed.
+        /// </summary>
+        private NavigationResult NavigateToRecord(SusRouteRecord record, string path,
+            Dictionary<string, object> props, bool isReplace)
+        {
+            if (!TryBuildToRoute(record, path, props, out var toRoute))
+                return NavigationResult.NotFound;
 
             var fromRoute = CurrentRoute.Value ?? SusRoute.None;
-            return Navigate(fromRoute, toRoute, isReplace: true, stepOffset: 0);
+            return Navigate(fromRoute, toRoute, isReplace, stepOffset: 0);
         }
 
         public NavigationResult Back()
@@ -659,12 +656,11 @@ namespace Sharq.Router
         // ════════════════════════════════════════════════════════════════
 
         private NavigationResult Navigate(SusRoute fromRoute, SusRoute toRoute, bool isReplace,
-            int stepOffset = 0, bool asyncGuardsHandled = false)
+            int stepOffset = 0)
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             // Sync navigation cannot await async guards — warn so they are not silently skipped.
-            if (!asyncGuardsHandled
-                && (_beforeEachAsyncGuards.Count > 0 || _beforeResolveAsyncGuards.Count > 0))
+            if (_beforeEachAsyncGuards.Count > 0 || _beforeResolveAsyncGuards.Count > 0)
             {
                 SusLog.Verbose(
                     "[GuardAudit] Sync navigation (Push/Replace/Back/Forward) skips async guards " +
@@ -680,30 +676,9 @@ namespace Sharq.Router
                 return NavigationResult.Busy;
             }
             _isNavigating = true;
-
             try
             {
-                var result = NavigateCore(fromRoute, toRoute, isReplace, stepOffset);
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                if (result == NavigationResult.Success)
-                {
-                    var root = _routeView?.panel?.visualTree;
-                    if (root != null)
-                    {
-                        Sharq.Core.Diagnostics.ScreenAudit.LayoutDump(root);
-                        Sharq.Core.Diagnostics.ScreenAudit.FullPropsDump(root);
-                    }
-                }
-#endif
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                if (result == NavigationResult.Aborted)
-                    SusLog.Verbose($"[GuardAudit] Nav from '{fromRoute.FullPath}' " +
-                        $"→ '{toRoute.FullPath}' was rejected by a guard or lifecycle hook " +
-                        $"(BeforeLeave/CanLeave/BeforeEach/CanEnter/BeforeResolve/BeforeEnter).");
-#endif
-                if (result != NavigationResult.Success)
-                    FireError(result, fromRoute, toRoute);
-                return result;
+                return RunCoreAndAudit(fromRoute, toRoute, isReplace, stepOffset);
             }
             finally
             {
@@ -711,26 +686,46 @@ namespace Sharq.Router
             }
         }
 
+        /// <summary>
+        /// Runs NavigateCore and the surrounding dev-mode audit/FireError bookkeeping.
+        /// Shared by the sync entry point (<see cref="Navigate"/>, which owns the
+        /// <c>_isNavigating</c> re-entrancy guard) and <see cref="NavigateAsync"/> (which holds
+        /// the same guard itself across its awaited guard pipeline — see the re-entrancy note
+        /// there — and so calls this directly instead of re-entering <see cref="Navigate"/>).
+        /// </summary>
+        private NavigationResult RunCoreAndAudit(SusRoute fromRoute, SusRoute toRoute, bool isReplace, int stepOffset)
+        {
+            var result = NavigateCore(fromRoute, toRoute, isReplace, stepOffset);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (result == NavigationResult.Success)
+            {
+                var root = _routeView?.panel?.visualTree;
+                if (root != null)
+                {
+                    Sharq.Core.Diagnostics.ScreenAudit.LayoutDump(root);
+                    Sharq.Core.Diagnostics.ScreenAudit.FullPropsDump(root);
+                }
+            }
+            if (result == NavigationResult.Aborted)
+                SusLog.Verbose($"[GuardAudit] Nav from '{fromRoute.FullPath}' " +
+                    $"→ '{toRoute.FullPath}' was rejected by a guard or lifecycle hook " +
+                    $"(BeforeLeave/CanLeave/BeforeEach/CanEnter/BeforeResolve/BeforeEnter).");
+#endif
+            if (result != NavigationResult.Success)
+                FireError(result, fromRoute, toRoute);
+            return result;
+        }
+
+        // ── NavigateCore steps ──────────────────────────────────────────────
+        // NavigateCore is split into five private steps, run in sequence. Each step
+        // either mutates fromRoute/toRoute in place (both are reference types) or,
+        // for the redirect step, reassigns toRoute wholesale via a ref parameter.
+
         private NavigationResult NavigateCore(SusRoute fromRoute, SusRoute toRoute, bool isReplace, int stepOffset)
         {
-            // ── Redirect ──
-            if (!string.IsNullOrEmpty(toRoute.Record?.Config?.Redirect))
-            {
-                var redirectRecord = Resolve(toRoute.Record.Config.Redirect);
-                if (redirectRecord == null) return NavigationResult.NotFound;
-
-                var redirectPath = toRoute.Record.Config.Redirect;
-                var redirectParams = redirectRecord.Match(redirectPath);
-                var carriedProps = toRoute.Props;
-                toRoute = new SusRoute(redirectRecord, redirectPath, redirectParams)
-                {
-                    MatchedChain = ResolveChain(redirectPath)
-                        ?? new List<SusRouteRecord> { redirectRecord }
-                };
-                // Carry the pre-redirect props as explicit (highest priority),
-                // then merge redirect target's params/query/defaults underneath.
-                toRoute.Props = BuildMergedProps(redirectRecord, toRoute, carriedProps);
-            }
+            // ── Step A: Redirect ──
+            if (!TryResolveRedirect(ref toRoute))
+                return NavigationResult.NotFound;
 
             // ── Step 0: No-op ──
             if (fromRoute.FullPath == toRoute.FullPath && fromRoute.Record == toRoute.Record)
@@ -754,48 +749,102 @@ namespace Sharq.Router
             var fromKeepAlive = fromRoute.Record?.Config?.KeepAlive ?? false;
             var targetKeepAlive = toRoute.Record?.Config?.KeepAlive ?? false;
 
-            // ── Step 0.5: beforeRouteUpdate (same record + active screen) ──
+            // ── Step B: same-record param update (beforeRouteUpdate) ──
             if (fromRoute.Record == toRoute.Record && fromRoute.IsActive)
+                return NavigateSameRecordUpdate(fromRoute, toRoute, isReplace, stepOffset, fromKeepAlive);
+
+            // ── Step C: leave/enter guard pipeline (Steps 1–4.5) ──
+            var guardResult = RunNavigationGuards(fromRoute, toRoute);
+            if (guardResult != NavigationResult.Success)
+                return guardResult;
+
+            // ── Step D: teardown + BeforeResolve + create/reuse screens (Steps 5, 5.5, 6) ──
+            var screenResult = PrepareTargetScreens(fromRoute, toRoute, fromKeepAlive, targetKeepAlive,
+                out int chainNewDepth, out bool hasMultiLevelChain);
+            if (screenResult != NavigationResult.Success)
+                return screenResult;
+
+            // ── Step E: stack update, RouteView, Entered, CurrentRoute + AfterEach (Steps 7–10) ──
+            return FinalizeNavigation(fromRoute, toRoute, isReplace, stepOffset, fromKeepAlive,
+                hasMultiLevelChain, chainNewDepth);
+        }
+
+        /// <summary>
+        /// Step A: if the target route config has a Redirect path, resolves it and replaces
+        /// <paramref name="toRoute"/> with the redirect target's route (carrying pre-redirect
+        /// props as explicit/highest priority). Returns false (NotFound) when the redirect
+        /// target itself does not resolve.
+        /// </summary>
+        private bool TryResolveRedirect(ref SusRoute toRoute)
+        {
+            if (string.IsNullOrEmpty(toRoute.Record?.Config?.Redirect))
+                return true;
+
+            var redirectRecord = Resolve(toRoute.Record.Config.Redirect);
+            if (redirectRecord == null) return false;
+
+            var redirectPath = toRoute.Record.Config.Redirect;
+            var redirectParams = redirectRecord.Match(redirectPath);
+            var carriedProps = toRoute.Props;
+            toRoute = new SusRoute(redirectRecord, redirectPath, redirectParams)
             {
-                if (!fromRoute.Screen.BeforeRouteUpdate(toRoute))
+                MatchedChain = ResolveChain(redirectPath)
+                    ?? new List<SusRouteRecord> { redirectRecord }
+            };
+            // Carry the pre-redirect props as explicit (highest priority),
+            // then merge redirect target's params/query/defaults underneath.
+            toRoute.Props = BuildMergedProps(redirectRecord, toRoute, carriedProps);
+            return true;
+        }
+
+        /// <summary>
+        /// Step B: fromRoute and toRoute share the same route record and the screen is
+        /// active — reuse the existing screen instance (BeforeRouteUpdate) instead of
+        /// tearing it down and recreating it.
+        /// </summary>
+        private NavigationResult NavigateSameRecordUpdate(SusRoute fromRoute, SusRoute toRoute,
+            bool isReplace, int stepOffset, bool fromKeepAlive)
+        {
+            if (!fromRoute.Screen.BeforeRouteUpdate(toRoute))
+                return NavigationResult.Aborted;
+
+            // Global guards also run on param-update (as in Vue Router)
+            foreach (var guard in _beforeEachGuards)
+            {
+                if (!guard(fromRoute, toRoute))
                     return NavigationResult.Aborted;
-
-                // Global guards also run on param-update (as in Vue Router)
-                foreach (var guard in _beforeEachGuards)
-                {
-                    if (!guard(fromRoute, toRoute))
-                        return NavigationResult.Aborted;
-                }
-
-                fromRoute.Screen.Props = toRoute.Props;
-                toRoute.Screen = fromRoute.Screen;
-
-                // beforeResolve on param-update (as in Vue Router)
-                foreach (var guard in _beforeResolveGuards)
-                {
-                    if (!guard(fromRoute, toRoute))
-                        return NavigationResult.Aborted;
-                }
-
-                if (stepOffset == 0 && !isReplace)
-                {
-                    if (!fromKeepAlive)
-                        fromRoute.Screen = null;
-                    _history[_historyIndex] = toRoute;
-                }
-                else if (isReplace)
-                {
-                    if (!fromKeepAlive)
-                        fromRoute.Screen = null;
-                    _history[_historyIndex] = toRoute;
-                }
-
-                CurrentRoute.Value = toRoute;
-                foreach (var hook in _afterEachHooks)
-                    hook(fromRoute, toRoute);
-                return NavigationResult.Success;
             }
 
+            fromRoute.Screen.Props = toRoute.Props;
+            toRoute.Screen = fromRoute.Screen;
+
+            // beforeResolve on param-update (as in Vue Router)
+            foreach (var guard in _beforeResolveGuards)
+            {
+                if (!guard(fromRoute, toRoute))
+                    return NavigationResult.Aborted;
+            }
+
+            if (stepOffset == 0 || isReplace)
+            {
+                if (!fromKeepAlive)
+                    fromRoute.Screen = null;
+                _history[_historyIndex] = toRoute;
+            }
+
+            CurrentRoute.Value = toRoute;
+            foreach (var hook in _afterEachHooks)
+                hook(fromRoute, toRoute);
+            return NavigationResult.Success;
+        }
+
+        /// <summary>
+        /// Steps 1–4.5: leave/enter guard pipeline — BeforeLeave → CanLeave → BeforeEach →
+        /// CanEnter → per-route BeforeEnter(fn). Returns Aborted from the first guard that
+        /// rejects, else Success.
+        /// </summary>
+        private NavigationResult RunNavigationGuards(SusRoute fromRoute, SusRoute toRoute)
+        {
             // ── Step 1: BeforeLeave ──
             if (fromRoute.IsActive && fromRoute.Screen != null)
             {
@@ -834,6 +883,22 @@ namespace Sharq.Router
                     return NavigationResult.Aborted;
             }
 
+            return NavigationResult.Success;
+        }
+
+        /// <summary>
+        /// Steps 5, 5.5, 6: tear down the outgoing screen (Left), run BeforeResolve guards
+        /// (before screen creation, so aborting has no side effects), then create or reuse
+        /// the target screen(s) — chain-aware for nested routes. Outputs the chain depth info
+        /// <see cref="FinalizeNavigation"/> needs for Entered().
+        /// </summary>
+        private NavigationResult PrepareTargetScreens(SusRoute fromRoute, SusRoute toRoute,
+            bool fromKeepAlive, bool targetKeepAlive,
+            out int chainNewDepth, out bool hasMultiLevelChain)
+        {
+            chainNewDepth = 0;
+            hasMultiLevelChain = false;
+
             // ── Step 5: Left ──
             // For chain routes, teardown is handled in Step 6 (per-level, skips common prefix)
             bool isFromChainRoute = fromRoute.ChainScreens != null && fromRoute.ChainScreens.Count > 1;
@@ -852,9 +917,8 @@ namespace Sharq.Router
             // ── Step 6: Create/reuse screen (chain-aware) ──
             var chain = toRoute.MatchedChain;
             var fromChain = fromRoute.MatchedChain;
-            bool hasMultiLevelChain = chain != null && chain.Count > 1;
+            hasMultiLevelChain = chain != null && chain.Count > 1;
             // Chain levels at index >= chainNewDepth were freshly created (need Entered()).
-            int chainNewDepth = 0;
 
             if (hasMultiLevelChain)
             {
@@ -940,6 +1004,17 @@ namespace Sharq.Router
                 }
             }
 
+            return NavigationResult.Success;
+        }
+
+        /// <summary>
+        /// Steps 7–10: history stack update, RouteView mount/diff, Entered() on freshly
+        /// created screens, and CurrentRoute + AfterEach hooks.
+        /// </summary>
+        private NavigationResult FinalizeNavigation(SusRoute fromRoute, SusRoute toRoute,
+            bool isReplace, int stepOffset, bool fromKeepAlive,
+            bool hasMultiLevelChain, int chainNewDepth)
+        {
             // ── Step 7: Stack update ──
             if (stepOffset == 0 && isReplace && _historyIndex >= 0)
             {
@@ -1233,30 +1308,8 @@ namespace Sharq.Router
         {
             var record = Resolve(path);
             if (record == null)
-            {
-                FireError(NavigationResult.NotFound,
-                    CurrentRoute.Value ?? SusRoute.None,
-                    new SusRoute(null, path, null));
-                return NavigationResult.NotFound;
-            }
-
-            var pathParams = record.Match(path);
-            if (pathParams == null && record.ParamNames.Count > 0)
-            {
-                FireError(NavigationResult.NotFound,
-                    CurrentRoute.Value ?? SusRoute.None,
-                    new SusRoute(null, path, null));
-                return NavigationResult.NotFound;
-            }
-
-            var toRoute = new SusRoute(record, path, pathParams)
-            {
-                MatchedChain = ResolveChain(path) ?? new List<SusRouteRecord> { record }
-            };
-            toRoute.Props = BuildMergedProps(record, toRoute, props);
-
-            var fromRoute = CurrentRoute.Value ?? SusRoute.None;
-            return await NavigateAsync(fromRoute, toRoute, isReplace: false, stepOffset: 0);
+                return FireNotFound(path);
+            return await NavigateToRecordAsync(record, path, props, isReplace: false);
         }
 
         /// <summary>
@@ -1267,57 +1320,82 @@ namespace Sharq.Router
         {
             var record = Resolve(path);
             if (record == null)
-            {
-                FireError(NavigationResult.NotFound,
-                    CurrentRoute.Value ?? SusRoute.None,
-                    new SusRoute(null, path, null));
-                return NavigationResult.NotFound;
-            }
-
-            var pathParams = record.Match(path);
-            if (pathParams == null && record.ParamNames.Count > 0)
-            {
-                FireError(NavigationResult.NotFound,
-                    CurrentRoute.Value ?? SusRoute.None,
-                    new SusRoute(null, path, null));
-                return NavigationResult.NotFound;
-            }
-
-            var toRoute = new SusRoute(record, path, pathParams)
-            {
-                MatchedChain = ResolveChain(path) ?? new List<SusRouteRecord> { record }
-            };
-            toRoute.Props = BuildMergedProps(record, toRoute, props);
-
-            var fromRoute = CurrentRoute.Value ?? SusRoute.None;
-            return await NavigateAsync(fromRoute, toRoute, isReplace: true, stepOffset: 0);
+                return FireNotFound(path);
+            return await NavigateToRecordAsync(record, path, props, isReplace: true);
         }
 
+        /// <summary>
+        /// Builds the target route from an already-resolved record and runs it through the
+        /// async navigate pipeline. Shared by PushAsync/ReplaceAsync (the async counterpart
+        /// of <see cref="NavigateToRecord"/>).
+        /// </summary>
+        private async Task<NavigationResult> NavigateToRecordAsync(SusRouteRecord record, string path,
+            Dictionary<string, object> props, bool isReplace)
+        {
+            if (!TryBuildToRoute(record, path, props, out var toRoute))
+                return NavigationResult.NotFound;
+
+            var fromRoute = CurrentRoute.Value ?? SusRoute.None;
+            return await NavigateAsync(fromRoute, toRoute, isReplace, stepOffset: 0);
+        }
+
+        /// <summary>
+        /// Async navigate pipeline: awaits the async guards, then runs the same core+audit
+        /// path as sync navigation.
+        ///
+        /// <b>Re-entrancy:</b> the <c>_isNavigating</c> guard is acquired HERE,
+        /// before the first await, and held for the full method — including while awaiting
+        /// BeforeEachAsync/BeforeResolveAsync — not just around the final sync step. Async
+        /// guards can yield for real time; if the guard were acquired only inside
+        /// <see cref="Navigate"/> (i.e. after these awaits), two concurrent NavigateAsync
+        /// calls could both run their guards concurrently against the same stale
+        /// fromRoute/CurrentRoute snapshot, and both eventually commit — the second one
+        /// mutating a fromRoute object the first navigation had already torn down (its
+        /// Screen nulled/Left() twice). Holding the guard up front makes the second call
+        /// return Busy immediately instead of racing. Calls <see cref="RunCoreAndAudit"/>
+        /// directly (not <see cref="Navigate"/>) for the final step, since re-entering
+        /// Navigate would see this method's own guard as "busy" and abort.
+        /// </summary>
         private async Task<NavigationResult> NavigateAsync(
             SusRoute fromRoute, SusRoute toRoute, bool isReplace, int stepOffset)
         {
-            // ── Async beforeEach guards ──
-            foreach (var guard in _beforeEachAsyncGuards)
+            if (_isNavigating)
             {
-                if (!await guard(fromRoute, toRoute))
-                {
-                    FireError(NavigationResult.Aborted, fromRoute, toRoute, "BeforeEachAsync");
-                    return NavigationResult.Aborted;
-                }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                SusLog.Warn($"[SusRouter] Async navigation to '{toRoute?.FullPath}' dropped — router is busy (concurrent navigation). Resync UI to CurrentRoute.");
+#endif
+                return NavigationResult.Busy;
             }
-
-            // ── Async beforeResolve guards (awaited before screen creation) ──
-            foreach (var guard in _beforeResolveAsyncGuards)
+            _isNavigating = true;
+            try
             {
-                if (!await guard(fromRoute, toRoute))
+                // ── Async beforeEach guards ──
+                foreach (var guard in _beforeEachAsyncGuards)
                 {
-                    FireError(NavigationResult.Aborted, fromRoute, toRoute, "BeforeResolveAsync");
-                    return NavigationResult.Aborted;
+                    if (!await guard(fromRoute, toRoute))
+                    {
+                        FireError(NavigationResult.Aborted, fromRoute, toRoute, "BeforeEachAsync");
+                        return NavigationResult.Aborted;
+                    }
                 }
-            }
 
-            // ── Delegate to sync navigate core (runs sync guards + screen creation) ──
-            return Navigate(fromRoute, toRoute, isReplace, stepOffset, asyncGuardsHandled: true);
+                // ── Async beforeResolve guards (awaited before screen creation) ──
+                foreach (var guard in _beforeResolveAsyncGuards)
+                {
+                    if (!await guard(fromRoute, toRoute))
+                    {
+                        FireError(NavigationResult.Aborted, fromRoute, toRoute, "BeforeResolveAsync");
+                        return NavigationResult.Aborted;
+                    }
+                }
+
+                // ── Run sync guards + screen creation (re-entrancy guard already held above) ──
+                return RunCoreAndAudit(fromRoute, toRoute, isReplace, stepOffset);
+            }
+            finally
+            {
+                _isNavigating = false;
+            }
         }
     }
 }

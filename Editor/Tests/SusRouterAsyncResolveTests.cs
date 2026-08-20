@@ -110,5 +110,52 @@ namespace Sharq.Router.Editor.Tests
             Assert.AreEqual(0, called,
                 "Async beforeResolve must NOT run on sync Push");
         }
+
+        /// <summary>
+        /// Regression: NavigateAsync must hold the re-entrancy guard for its full
+        /// duration (including the awaited guards), not just around the final sync step.
+        /// Otherwise two concurrent PushAsync calls can both run their async guards against
+        /// the same stale fromRoute/CurrentRoute snapshot before either commits — the second
+        /// one then mutates a fromRoute object the first navigation has already torn down.
+        /// </summary>
+        [Test, Timeout(2000)]
+        public async Task ConcurrentPushAsync_SecondCallDroppedBusy_DoesNotRaceFromTo()
+        {
+            var router = new SusRouter();
+            router.Register("/a", typeof(DummyScreen));
+            router.Register("/b", typeof(DummyScreen));
+            SetHome(router);
+
+            var gate = new TaskCompletionSource<bool>();
+            int guardCalls = 0;
+            router.BeforeEachAsync(async (from, to) =>
+            {
+                guardCalls++;
+                await gate.Task;
+                return true;
+            });
+
+            // First call starts and suspends mid-guard, awaiting the gate. If the
+            // re-entrancy guard is held across the await (the fix), this already
+            // means _isNavigating == true at this point.
+            var firstTask = router.PushAsync("/a");
+
+            // A second call issued while the first is still in-flight must be dropped
+            // as Busy WITHOUT ever invoking the guard (it never gets to race fromRoute).
+            var secondResult = await router.PushAsync("/b");
+
+            Assert.AreEqual(NavigationResult.Busy, secondResult,
+                "A concurrent PushAsync issued while the first is awaiting its guards " +
+                "must be dropped as Busy, not race the in-flight navigation's from/to.");
+            Assert.AreEqual(1, guardCalls,
+                "The busy-dropped call must not invoke guards at all.");
+
+            gate.SetResult(true);
+            var firstResult = await firstTask;
+
+            Assert.AreEqual(NavigationResult.Success, firstResult);
+            Assert.AreEqual("/a", router.CurrentRoute.Value.FullPath,
+                "The winning navigation must land on its own target route.");
+        }
     }
 }

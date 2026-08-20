@@ -5,6 +5,18 @@ All notable changes to this package are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.14] - 2026-08-20
+
+### Fixed
+- Async navigation re-entrancy: `NavigateAsync` now holds the `_isNavigating` guard across awaited
+  guards, closing a from/to race when a second navigation started during an awaited guard (T-1105).
+
+### Changed
+- Internal refactor: six copies of the route-build sequence (Push/Replace/Named/Record/Async) merged
+  into one `TryBuildToRoute`, `NavigateCore` split into private steps — no behavior change, 169 tests
+  green before and after (T-1105).
+- Docs stamps: install URLs pinned to core 1.0.23 / router 1.0.14.
+
 ## [1.0.13] - 2026-08-19
 
 ### Changed

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -20,9 +21,15 @@ namespace Sharq.Router
     /// wrapper, focus first focusable inside the modal; on last Close (1→0)
     /// restore background and prior focus.
     ///
+    /// Awaitable: <see cref="ShowAsync{TResult}(Type, Dictionary{string, object})"/> /
+    /// <see cref="ShowAsync{TResult}(Func{SusRouterModal}, Dictionary{string, object})"/> —
+    /// completes when the modal is dismissed (via <see cref="SusRouterModal.Complete"/>
+    /// or Close without a result).
+    ///
     /// Usage:
     ///   router.ModalService.Show(typeof(MyModal));
     ///   router.ModalService.Show(typeof(MyModal), new() { { "mode", "login" } });
+    ///   var answer = await router.ModalService.ShowAsync&lt;string&gt;(typeof(MyModal));
     ///   router.ModalService.Close();
     ///   router.ModalService.CloseAll();
     /// </summary>
@@ -49,6 +56,7 @@ namespace Sharq.Router
             public SusRouterModal Modal;
             public VisualElement Wrapper; // scrim + contentBox
             public OverlayEntry Overlay;
+            public TaskCompletionSource<object> AsyncTcs;
         }
 
         struct BackgroundInteractState
@@ -73,6 +81,71 @@ namespace Sharq.Router
             if (modalType == null) throw new ArgumentNullException(nameof(modalType));
             if (!typeof(SusRouterModal).IsAssignableFrom(modalType))
                 throw new ArgumentException($"Modal type {modalType.Name} must inherit SusRouterModal", nameof(modalType));
+
+            return ShowCore(() => (SusRouterModal)Activator.CreateInstance(modalType), props, modalType.Name);
+        }
+
+        /// <summary>
+        /// Shows a modal created by <paramref name="factory"/>.
+        /// </summary>
+        public SusRouterModal Show(Func<SusRouterModal> factory, Dictionary<string, object> props = null)
+        {
+            if (factory == null) throw new ArgumentNullException(nameof(factory));
+            return ShowCore(factory, props, "factory");
+        }
+
+        /// <summary>
+        /// Shows a modal and awaits its result. Completes when the modal is dismissed —
+        /// via <see cref="SusRouterModal.Complete"/> or Close without an explicit result
+        /// (<see cref="SusRouterModal"/> dismiss default / typed subclass default).
+        /// </summary>
+        public Task<TResult> ShowAsync<TResult>(Type modalType, Dictionary<string, object> props = null)
+        {
+            if (modalType == null) throw new ArgumentNullException(nameof(modalType));
+            if (!typeof(SusRouterModal).IsAssignableFrom(modalType))
+                throw new ArgumentException($"Modal type {modalType.Name} must inherit SusRouterModal", nameof(modalType));
+
+            return ShowAsyncCore<TResult>(() => (SusRouterModal)Activator.CreateInstance(modalType), props, modalType.Name);
+        }
+
+        /// <summary>
+        /// Shows a factory-built modal and awaits its result.
+        /// </summary>
+        public Task<TResult> ShowAsync<TResult>(Func<SusRouterModal> factory, Dictionary<string, object> props = null)
+        {
+            if (factory == null) throw new ArgumentNullException(nameof(factory));
+            return ShowAsyncCore<TResult>(factory, props, "factory");
+        }
+
+        Task<TResult> ShowAsyncCore<TResult>(Func<SusRouterModal> factory, Dictionary<string, object> props, string debugName)
+        {
+            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var modal = ShowCore(factory, props, debugName, tcs);
+            if (modal == null)
+            {
+                tcs.TrySetResult(default(TResult));
+                return UnwrapAsyncResult<TResult>(tcs.Task);
+            }
+
+            return UnwrapAsyncResult<TResult>(tcs.Task);
+        }
+
+        static async Task<TResult> UnwrapAsyncResult<TResult>(Task<object> boxed)
+        {
+            var value = await boxed.ConfigureAwait(true);
+            if (value is TResult typed)
+                return typed;
+            if (value == null)
+                return default;
+            return (TResult)value;
+        }
+
+        SusRouterModal ShowCore(
+            Func<SusRouterModal> factory,
+            Dictionary<string, object> props,
+            string debugName,
+            TaskCompletionSource<object> asyncTcs = null)
+        {
             if (OverlayHost == null)
             {
                 SusLog.Error("[SusModalService] OverlayHost is null. Call Router.Init(overlayHost) first.");
@@ -81,7 +154,7 @@ namespace Sharq.Router
             if (MaxModalDepth > 0 && _stack.Count >= MaxModalDepth)
             {
                 SusLog.Warn($"[SusModalService] MaxModalDepth ({MaxModalDepth}) exceeded. " +
-                    $"Rejecting Show({modalType.Name}). Close existing modals first.");
+                    $"Rejecting Show({debugName}). Close existing modals first.");
                 return null;
             }
 
@@ -92,7 +165,10 @@ namespace Sharq.Router
                 SnapshotBackgroundInteractivity();
             }
 
-            var modal = (SusRouterModal)Activator.CreateInstance(modalType);
+            var modal = factory();
+            if (modal == null)
+                throw new InvalidOperationException($"Modal factory for {debugName} returned null.");
+
             modal.Router = Router;
             modal.ModalService = this;
             modal.Props = props ?? new Dictionary<string, object>();
@@ -130,7 +206,16 @@ namespace Sharq.Router
 
             OverlayHost.InstallFocusTrap(wrapper);
 
-            _stack.Push(new ModalEntry { Modal = modal, Wrapper = wrapper, Overlay = overlayEntry });
+            if (asyncTcs != null)
+                modal.BindAsyncCompletion(asyncTcs);
+
+            _stack.Push(new ModalEntry
+            {
+                Modal = modal,
+                Wrapper = wrapper,
+                Overlay = overlayEntry,
+                AsyncTcs = asyncTcs,
+            });
 
             SyncCount();
 
@@ -293,6 +378,7 @@ namespace Sharq.Router
 
             entry.Modal.Dismissed();
             OverlayHost?.RemoveFromOverlay(entry.Overlay);
+            entry.Modal.NotifyAsyncCompleted();
         }
 
         /// <summary>

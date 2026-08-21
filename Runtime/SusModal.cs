@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine.UIElements;
 
 using Sharq.Core;
@@ -18,10 +19,15 @@ namespace Sharq.Router
     ///   4. BeforeDismiss() — guard (return false to prevent close)
     ///   5. Dismissed() — cleanup before removal
     ///
+    /// Awaitable result (ShowAsync):
+    ///   Complete(result) stores the value and dismisses; Close/Dismiss without
+    ///   Complete yields <see cref="AsyncDismissResult"/> (default null).
+    ///
     /// Usage:
     ///   router.ModalService.Show(typeof(MyDialog), new() { ["title"] = "Hello" });
+    ///   var answer = await router.ModalService.ShowAsync&lt;string&gt;(typeof(MyDialog));
     ///   // Inside the dialog:
-    ///   Dismiss(); // close self
+    ///   Complete("ok"); // or Dismiss() for cancel/default
     /// </summary>
     public abstract class SusRouterModal : SusModalBase
     {
@@ -33,6 +39,10 @@ namespace Sharq.Router
 
         /// <summary>Reference back to the modal service that owns us.</summary>
         internal SusModalService ModalService { get; set; }
+
+        object _asyncResult;
+        bool _hasAsyncResult;
+        TaskCompletionSource<object> _asyncTcs;
 
         // Build() is declared abstract on SusComponent and invoked by its constructor;
         // subclasses override it. Router/Props are NOT yet available inside Build()
@@ -63,11 +73,54 @@ namespace Sharq.Router
         public virtual void Dismissed() { }
 
         /// <summary>
+        /// Result used when the modal is closed without <see cref="Complete"/>.
+        /// Override for typed cancel sentinels (e.g. -1 for choice index).
+        /// </summary>
+        protected virtual object AsyncDismissResult => null;
+
+        /// <summary>
+        /// Complete an awaitable <see cref="SusModalService.ShowAsync{TResult}"/> with
+        /// <paramref name="result"/> and dismiss this modal.
+        /// </summary>
+        public void Complete(object result)
+        {
+            _asyncResult = result;
+            _hasAsyncResult = true;
+            Dismiss();
+        }
+
+        internal void BindAsyncCompletion(TaskCompletionSource<object> tcs)
+        {
+            _asyncTcs = tcs;
+        }
+
+        internal void NotifyAsyncCompleted()
+        {
+            if (_asyncTcs == null) return;
+            var tcs = _asyncTcs;
+            _asyncTcs = null;
+            var value = _hasAsyncResult ? _asyncResult : AsyncDismissResult;
+            tcs.TrySetResult(value);
+        }
+
+        /// <summary>
         /// Close this modal (triggers BeforeDismiss → Dismissed).
         /// </summary>
         protected void Dismiss()
         {
             ModalService?.Close();
         }
+    }
+
+    /// <summary>
+    /// Typed router modal: <see cref="Complete(TResult)"/> boxes into the shared async path.
+    /// </summary>
+    public abstract class SusRouterModal<TResult> : SusRouterModal
+    {
+        /// <summary>Complete with a typed result and dismiss.</summary>
+        public void Complete(TResult result) => base.Complete(result);
+
+        /// <inheritdoc />
+        protected override object AsyncDismissResult => default(TResult);
     }
 }

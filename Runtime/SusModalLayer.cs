@@ -29,20 +29,23 @@ namespace Sharq.Router
             style.right = 0;
             style.bottom = 0;
 
-            // Dimmed backdrop
+            // Dimmed backdrop (appearance via .modal-scrim in SusModal.g.uss when present)
             _overlay = new VisualElement
             {
                 pickingMode = PickingMode.Position,
             };
+            _overlay.AddToClassList("modal-scrim");
             _overlay.style.position = Position.Absolute;
             _overlay.style.top = 0;
             _overlay.style.left = 0;
             _overlay.style.right = 0;
             _overlay.style.bottom = 0;
-            _overlay.style.backgroundColor = new StyleColor(new UnityEngine.Color(0f, 0f, 0f, 0.5f));
             _overlay.style.display = DisplayStyle.None;
             _overlay.RegisterCallback<ClickEvent>(_ => { /* backdrop click — no-op */ });
             Add(_overlay);
+            var sheet = UnityEngine.Resources.Load<UnityEngine.UIElements.StyleSheet>("SusRuntime/SusModal.g");
+            if (sheet != null && !styleSheets.Contains(sheet))
+                styleSheets.Add(sheet);
 
             // Dialog container (centered)
             _dialogContainer = new VisualElement

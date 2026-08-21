@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine.UIElements;
 
@@ -25,10 +26,19 @@ namespace Sharq.Router
         public const string UssClassName = "sus-screen";
 
         /// <summary>
+        /// When true (default), after <see cref="Entered"/> the screen focuses the first
+        /// focusable descendant (or restores the element saved on <see cref="Left"/>).
+        /// Opt out with <c>false</c> or USS class <see cref="SusFocusUtil.NoAutoFocusClass"/>.
+        /// </summary>
+        public bool AutoFocus { get; set; } = true;
+
+        /// <summary>
         /// Reference to the router that owns this screen.
         /// Set by SusRouter before BeforeEnter().
         /// </summary>
         public SusRouter Router { get; set; }
+
+        WeakReference<VisualElement> _savedFocus;
 
         protected SusScreen()
         {
@@ -63,15 +73,56 @@ namespace Sharq.Router
 
         /// <summary>
         /// Called by router after the screen has been added to the DOM.
-        /// Delegates to <see cref="OnEntered"/>. Do NOT override this method
-        /// — override OnEntered instead.
+        /// Delegates to <see cref="OnEntered"/>, then schedules AutoFocus (D1/D4).
+        /// Do NOT override this method — override OnEntered instead.
         /// </summary>
-        public void Entered() => OnEntered();
+        public void Entered()
+        {
+            OnEntered();
+            ScheduleAutoFocus();
+        }
 
         /// <summary>
         /// Override to react to the screen becoming active (schedule animations, etc.).
         /// </summary>
         protected virtual void OnEntered() { }
+
+        /// <summary>
+        /// Re-run AutoFocus / restore immediately (e.g. after modal Close with no prior focus).
+        /// Safe to call when AutoFocus is false (no-op).
+        /// </summary>
+        public void ApplyAutoFocus()
+        {
+            if (!AutoFocus) return;
+            if (ClassListContains(SusFocusUtil.NoAutoFocusClass)) return;
+            if (panel == null) return;
+
+            if (_savedFocus != null
+                && _savedFocus.TryGetTarget(out var saved)
+                && SusFocusUtil.IsUnder(saved, this)
+                && SusFocusUtil.IsFocusCandidate(saved))
+            {
+                saved.Focus();
+                return;
+            }
+
+            var first = SusFocusUtil.FindFirstFocusable(this);
+            first?.Focus();
+        }
+
+        void ScheduleAutoFocus()
+        {
+            if (!AutoFocus) return;
+            if (ClassListContains(SusFocusUtil.NoAutoFocusClass)) return;
+            if (panel == null)
+            {
+                // Detached (EditMode probes) — apply synchronously when possible.
+                ApplyAutoFocus();
+                return;
+            }
+
+            schedule.Execute(ApplyAutoFocus);
+        }
 
         /// <summary>
         /// Called by router when route props update on the same screen instance.
@@ -99,15 +150,29 @@ namespace Sharq.Router
 
         /// <summary>
         /// Called by router when this screen is being removed.
-        /// Delegates to <see cref="OnLeft"/>. Do NOT override this method
+        /// Captures focused descendant for restore on re-enter (D4), then
+        /// delegates to <see cref="OnLeft"/>. Do NOT override this method
         /// — override OnLeft instead.
         /// </summary>
-        public void Left() => OnLeft();
+        public void Left()
+        {
+            CaptureFocusForRestore();
+            OnLeft();
+        }
 
         /// <summary>
         /// Override to clean up (unsubscribe events, release resources).
         /// </summary>
         protected virtual void OnLeft() { }
+
+        void CaptureFocusForRestore()
+        {
+            var focused = focusController?.focusedElement as VisualElement;
+            if (focused != null && SusFocusUtil.IsUnder(focused, this))
+                _savedFocus = new WeakReference<VisualElement>(focused);
+            else
+                _savedFocus = null;
+        }
 
         // ─── Helpers for standard screens ─────────────────────────────
 

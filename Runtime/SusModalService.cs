@@ -15,6 +15,11 @@ namespace Sharq.Router
     /// have their own lifecycle (Shown / BeforeDismiss / Dismissed),
     /// and are explicitly placed in OverlayHost.
     ///
+    /// Focus lifecycle (ARCH-LUNA-GAP-B D2–D3): on first Show (0→1) snapshot
+    /// background <c>focusable</c>+<c>pickingMode</c>, install focus trap on the
+    /// wrapper, focus first focusable inside the modal; on last Close (1→0)
+    /// restore background and prior focus.
+    ///
     /// Usage:
     ///   router.ModalService.Show(typeof(MyModal));
     ///   router.ModalService.Show(typeof(MyModal), new() { { "mode", "login" } });
@@ -34,6 +39,9 @@ namespace Sharq.Router
         private readonly Stack<ModalEntry> _stack = new();
         static StyleSheet _susModalSheet;
 
+        List<BackgroundInteractState> _backgroundSnapshot;
+        WeakReference<VisualElement> _priorFocus;
+
         private void SyncCount() => CountProp.Value = _stack.Count;
 
         private class ModalEntry
@@ -41,6 +49,13 @@ namespace Sharq.Router
             public SusRouterModal Modal;
             public VisualElement Wrapper; // scrim + contentBox
             public OverlayEntry Overlay;
+        }
+
+        struct BackgroundInteractState
+        {
+            public VisualElement Element;
+            public bool Focusable;
+            public PickingMode PickingMode;
         }
 
         /// <summary>
@@ -68,6 +83,13 @@ namespace Sharq.Router
                 SusLog.Warn($"[SusModalService] MaxModalDepth ({MaxModalDepth}) exceeded. " +
                     $"Rejecting Show({modalType.Name}). Close existing modals first.");
                 return null;
+            }
+
+            var openingFirst = _stack.Count == 0;
+            if (openingFirst)
+            {
+                CapturePriorFocus();
+                SnapshotBackgroundInteractivity();
             }
 
             var modal = (SusRouterModal)Activator.CreateInstance(modalType);
@@ -106,14 +128,17 @@ namespace Sharq.Router
             var overlayEntry = OverlayHost.AddToOverlay(wrapper, OverlayCategory.Modal,
                 dismissOnClickOutside: false);
 
+            OverlayHost.InstallFocusTrap(wrapper);
+
             _stack.Push(new ModalEntry { Modal = modal, Wrapper = wrapper, Overlay = overlayEntry });
 
             SyncCount();
 
-            // ── Lifecycle: Shown on next panel update (DOM ready) ──
+            // ── Lifecycle: Shown + focus-in on next panel update (DOM ready) ──
             modal.schedule.Execute(() =>
             {
                 modal.NotifyShown();
+                SusFocusUtil.FindFirstFocusable(modal)?.Focus();
             });
 
             return modal;
@@ -128,6 +153,8 @@ namespace Sharq.Router
             var entry = _stack.Pop();
             CloseEntry(entry, force: false);
             SyncCount();
+            if (_stack.Count == 0)
+                OnModalStackEmptied();
         }
 
         /// <summary>
@@ -142,12 +169,115 @@ namespace Sharq.Router
                 CloseEntry(entry, force: true);
             }
             SyncCount();
+            OnModalStackEmptied();
         }
 
         /// <summary>
         /// Number of currently open modals.
         /// </summary>
         public int Count => _stack.Count;
+
+        void OnModalStackEmptied()
+        {
+            RestoreBackgroundInteractivity();
+            RestorePriorFocus();
+        }
+
+        void CapturePriorFocus()
+        {
+            var focused = OverlayHost?.focusController?.focusedElement as VisualElement;
+            _priorFocus = focused != null
+                ? new WeakReference<VisualElement>(focused)
+                : null;
+        }
+
+        void RestorePriorFocus()
+        {
+            if (_priorFocus != null
+                && _priorFocus.TryGetTarget(out var prior)
+                && prior.panel != null
+                && SusFocusUtil.IsFocusCandidate(prior))
+            {
+                prior.Focus();
+                _priorFocus = null;
+                return;
+            }
+
+            _priorFocus = null;
+            Router?.CurrentRoute?.Value?.Screen?.ApplyAutoFocus();
+        }
+
+        /// <summary>
+        /// Snapshot ScreenHost (or OverlayHost siblings) focusable+pickingMode once per 0→1.
+        /// Does not touch the modal wrapper / OverlayHost itself.
+        /// </summary>
+        internal void SnapshotBackgroundInteractivity()
+        {
+            if (_backgroundSnapshot != null) return;
+            _backgroundSnapshot = new List<BackgroundInteractState>(64);
+
+            foreach (var root in EnumerateBackgroundRoots())
+                WalkSnapshot(root);
+        }
+
+        /// <summary>
+        /// Restore background interactivity once per 1→0.
+        /// </summary>
+        internal void RestoreBackgroundInteractivity()
+        {
+            if (_backgroundSnapshot == null) return;
+
+            for (int i = _backgroundSnapshot.Count - 1; i >= 0; i--)
+            {
+                var s = _backgroundSnapshot[i];
+                if (s.Element == null) continue;
+                s.Element.focusable = s.Focusable;
+                s.Element.pickingMode = s.PickingMode;
+            }
+
+            _backgroundSnapshot = null;
+        }
+
+        IEnumerable<VisualElement> EnumerateBackgroundRoots()
+        {
+            var parent = OverlayHost?.parent;
+            if (parent == null) yield break;
+
+            var screenHost = parent.Q<ScreenHost>();
+            if (screenHost != null)
+            {
+                yield return screenHost;
+                yield break;
+            }
+
+            foreach (var child in parent.Children())
+            {
+                if (ReferenceEquals(child, OverlayHost)) continue;
+                yield return child;
+            }
+        }
+
+        void WalkSnapshot(VisualElement ve)
+        {
+            if (ve == null) return;
+            if (ve is OverlayHost) return;
+
+            if (ve.focusable || ve.pickingMode != PickingMode.Ignore)
+            {
+                _backgroundSnapshot.Add(new BackgroundInteractState
+                {
+                    Element = ve,
+                    Focusable = ve.focusable,
+                    PickingMode = ve.pickingMode,
+                });
+                ve.focusable = false;
+                ve.pickingMode = PickingMode.Ignore;
+            }
+
+            var count = ve.childCount;
+            for (int i = 0; i < count; i++)
+                WalkSnapshot(ve[i]);
+        }
 
         private void CloseEntry(ModalEntry entry, bool force)
         {

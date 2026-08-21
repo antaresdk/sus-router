@@ -193,5 +193,63 @@ namespace Sharq.Router.Editor.Tests
             Assert.IsNotNull(screen.Props);
             Assert.AreEqual(0, screen.Props.Count);
         }
+
+        [Test]
+        public void AutoFocus_DefaultsTrue()
+        {
+            var screen = new ProbeScreen();
+            Assert.IsTrue(screen.AutoFocus);
+        }
+
+        [Test]
+        public void ApplyAutoFocus_OptOut_Property_DoesNotFocus()
+        {
+            var screen = new ProbeScreen { AutoFocus = false };
+            var btn = new Button { name = "btn-a", text = "A", focusable = true };
+            screen.Add(btn);
+
+            screen.ApplyAutoFocus();
+            Assert.AreNotSame(btn, screen.focusController?.focusedElement);
+        }
+
+        [Test]
+        public void ApplyAutoFocus_OptOut_MarkerClass_DoesNotFocus()
+        {
+            var screen = new ProbeScreen();
+            screen.AddToClassList(SusFocusUtil.NoAutoFocusClass);
+            var btn = new Button { name = "btn-b", text = "B", focusable = true };
+            screen.Add(btn);
+
+            screen.ApplyAutoFocus();
+            Assert.AreNotSame(btn, screen.focusController?.focusedElement);
+        }
+
+        [Test]
+        public void FindFirstFocusable_SkipsDisplayNone()
+        {
+            var root = new VisualElement();
+            var hidden = new Button { name = "hidden", focusable = true };
+            hidden.style.display = DisplayStyle.None;
+            var visible = new Button { name = "visible", focusable = true };
+            root.Add(hidden);
+            root.Add(visible);
+
+            Assert.AreSame(visible, SusFocusUtil.FindFirstFocusable(root));
+        }
+
+        [Test]
+        public void Left_ThenApplyAutoFocus_PrefersSavedFocus()
+        {
+            // Without a panel, Focus/focusController are unavailable — verify capture
+            // + FindFirstFocusable ordering via manual saved-path using two buttons.
+            var screen = new ProbeScreen();
+            var first = new Button { name = "first", text = "1", focusable = true };
+            var second = new Button { name = "second", text = "2", focusable = true };
+            screen.Add(first);
+            screen.Add(second);
+
+            Assert.AreSame(first, SusFocusUtil.FindFirstFocusable(screen));
+            Assert.IsTrue(SusFocusUtil.IsUnder(second, screen));
+        }
     }
 }

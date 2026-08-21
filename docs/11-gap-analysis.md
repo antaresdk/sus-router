@@ -13,7 +13,7 @@
 | Routes (dynamic, named, nested, redirect, alias, meta, props, KeepAlive + LRU) | ✅ 10/10 |
 | History (cursor stack, go(n), forward, back) | ✅ 4/4 |
 | Animations (transition, slide, fade — real UITK transition properties) | ✅ 3/3 |
-| Modals + dim (unified SusModalService, SusModalLayer deprecated) | ✅ 2/2 |
+| Modals + dim (SusModalService) | ✅ 2/2 |
 | Helpers (router-link with [UxmlElement]+Text, active-link, beforeRouteUpdate with global guards) | ✅ 5/5 |
 | Optimization (lazy loading, KeepAlive LRU) | ✅ 2/2 |
 
@@ -28,7 +28,7 @@
 | KeepAlive LRU eviction (MaxKeepAlive=10) | ✅ |
 | [UxmlElement] + SusRouteLink.Text | ✅ |
 | beforeResolve BEFORE screen creation | ✅ |
-| SusModalLayer → [Obsolete] | ✅ |
+| SusModalLayer removed (ModalService only) | ✅ |
 
 > **Caveat:** nested routes — URL nesting only, no layout wrapper or nested `<router-view>`. Async guards — sync for now (TODO).
 

@@ -66,8 +66,7 @@ sus-router/
 │   ├── SusRouteLink.cs           ← Link component
 │   ├── SusModal.cs               ← SusRouterModal — modal base class
 │   ├── SusModalService.cs        ← Modal stack (OverlayHost)
-│   ├── SusModalLayer.cs          ← [Obsolete] legacy modal layer
-│   ├── SusRouteTransition.cs     ← Code-based animations
+│   ├── SusRouteTransition.cs     ← Code-based animations (SusMotion)
 │   ├── SusRouteBuilder.cs        ← Declarative route tree
 │   ├── SusAppRouterExtensions.cs ← SusApp.UseRouter(...)
 │   ├── SusOverlayServices.cs     ← Service aggregation

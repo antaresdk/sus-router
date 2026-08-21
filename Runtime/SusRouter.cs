@@ -1086,29 +1086,13 @@ namespace Sharq.Router
         //  Modal windows
         // ════════════════════════════════════════════════════════════════
 
-        // ─── ModalService / ModalLayer ────────────────────────────────
-
-        // Obsolete SusModalLayer for backward compatibility in tests.
-        // New code should use ModalService directly.
-#pragma warning disable CS0618
-        private SusModalLayer _modalLayer;
+        // ─── ModalService ─────────────────────────────────────────────
 
         /// <summary>
-        /// Injects a SusModalLayer spy/stub for testing (obsolete path).
-        /// When set, Modal() and CloseModal() delegate to the layer instead of ModalService.
+        /// Sets the current route and prepopulates history for EditMode/PlayMode tests
+        /// (InternalsVisibleTo test assemblies). Not part of the public buyer API.
         /// </summary>
-        internal void SetModalLayer(SusModalLayer layer)
-        {
-            _modalLayer = layer;
-        }
-#pragma warning restore CS0618
-
-        /// <summary>
-        /// Sets the current route and prepopulates history for testing.
-        /// Sets _historyIndex = 0 and CurrentRoute to this route.
-        /// Public for test access.
-        /// </summary>
-        public void SetCurrentForTest(SusRoute route)
+        internal void SetCurrentForTest(SusRoute route)
         {
             _history.Clear();
             _history.Add(route);
@@ -1119,11 +1103,6 @@ namespace Sharq.Router
 
         public void Modal(Type dialogType, Dictionary<string, object> props = null)
         {
-            if (_modalLayer != null)
-            {
-                _modalLayer.ShowModal(dialogType, props);
-                return;
-            }
             var modal = ModalService?.Show(dialogType, props);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             if (modal == null)
@@ -1132,14 +1111,11 @@ namespace Sharq.Router
         }
 
         /// <summary>
-        /// Closes the current modal (top of ModalService / ModalLayer stack).
+        /// Closes the current modal (top of <see cref="ModalService"/> stack).
         /// </summary>
         public void CloseModal()
         {
-            if (_modalLayer != null)
-                _modalLayer.CloseModal();
-            else
-                ModalService?.Close();
+            ModalService?.Close();
         }
 
         public void SetRouteView(SusRouteView view)

@@ -14,11 +14,16 @@ namespace Sharq.Router
         CrossFade,
     }
 
+    /// <summary>
+    /// Overlay curtain transitions (Fade / Slide / CrossFade) on <see cref="OverlayHost"/>.
+    /// Opacity paths use <see cref="SusMotion"/>; percent slides share <see cref="SusEaseUtil"/> ticks.
+    /// </summary>
     public class SusTransitionService
     {
         private OverlayHost _overlayHost;
         private VisualElement _curtain;
-        private IVisualElementScheduledItem _animation;
+        private SusMotionHandle _motion;
+        private IVisualElementScheduledItem _slideTick;
 
         public bool IsTransitioning => _curtain != null;
 
@@ -32,9 +37,12 @@ namespace Sharq.Router
         {
             EnsureCurtain();
             var c = _curtain;
-            c.style.opacity = 0f;
-            // Capture local ref — FadeIn may null _curtain while this animation still ticks.
-            Animate(c, duration * 0.5f, t => c.style.opacity = t, () => onComplete?.Invoke());
+            float half = duration * 0.5f;
+            _motion = SusMotion.On(c)
+                .FromOpacity(0f)
+                .Opacity(1f, half, SusEase.QuadInOut)
+                .Restore(SusRestoreMode.Keep)
+                .Play(() => onComplete?.Invoke());
         }
 
         public void FadeIn(float duration = 0.3f)
@@ -42,8 +50,12 @@ namespace Sharq.Router
             if (_curtain == null) return;
             var c = _curtain;
             _curtain = null;
-            c.style.opacity = 1f;
-            Animate(c, duration * 0.5f, t => c.style.opacity = 1f - t, () => _overlayHost?.RemoveFromOverlay(c));
+            float half = duration * 0.5f;
+            _motion = SusMotion.On(c)
+                .FromOpacity(1f)
+                .Opacity(0f, half, SusEase.QuadInOut)
+                .Restore(SusRestoreMode.Keep)
+                .Play(() => _overlayHost?.RemoveFromOverlay(c));
         }
 
         public void SlideOut(TransitionStyle direction, float duration = 0.3f, Action onComplete = null)
@@ -53,8 +65,9 @@ namespace Sharq.Router
             float start = direction == TransitionStyle.SlideLeft ? -100f : 100f;
             c.style.translate = new Translate(Length.Percent(start), 0, 0);
             c.style.opacity = 1f;
-            Animate(c, duration * 0.5f, t =>
-                c.style.translate = new Translate(Length.Percent(Mathf.Lerp(start, 0f, t)), 0, 0),
+            // Percent translate — SusMotion uses px; keep shared SusEaseUtil tick model.
+            AnimatePercent(c, duration * 0.5f,
+                t => c.style.translate = new Translate(Length.Percent(Mathf.Lerp(start, 0f, t)), 0, 0),
                 onComplete);
         }
 
@@ -65,8 +78,8 @@ namespace Sharq.Router
             _curtain = null;
             c.style.opacity = 1f;
             float end = direction == TransitionStyle.SlideLeft ? 100f : -100f;
-            Animate(c, duration * 0.5f, t =>
-                c.style.translate = new Translate(Length.Percent(Mathf.Lerp(0f, end, t)), 0, 0),
+            AnimatePercent(c, duration * 0.5f,
+                t => c.style.translate = new Translate(Length.Percent(Mathf.Lerp(0f, end, t)), 0, 0),
                 () => _overlayHost?.RemoveFromOverlay(c));
         }
 
@@ -74,25 +87,31 @@ namespace Sharq.Router
         {
             EnsureCurtain();
             var c = _curtain;
-            c.style.opacity = 0f;
             float half = duration * 0.5f;
-            Animate(c, half, t => c.style.opacity = t, () =>
-            {
-                c.style.opacity = 1f;
-                onComplete?.Invoke();
-                Animate(c, half, t => c.style.opacity = 1f - t, () =>
+            _motion = SusMotion.On(c)
+                .FromOpacity(0f)
+                .Opacity(1f, half, SusEase.QuadInOut)
+                .Restore(SusRestoreMode.Keep)
+                .Play(() =>
                 {
-                    _overlayHost?.RemoveFromOverlay(c);
-                    if (ReferenceEquals(_curtain, c))
-                        _curtain = null;
+                    onComplete?.Invoke();
+                    _motion = SusMotion.On(c)
+                        .FromOpacity(1f)
+                        .Opacity(0f, half, SusEase.QuadInOut)
+                        .Restore(SusRestoreMode.Keep)
+                        .Play(() =>
+                        {
+                            _overlayHost?.RemoveFromOverlay(c);
+                            if (ReferenceEquals(_curtain, c))
+                                _curtain = null;
+                        });
                 });
-            });
         }
 
         public void Cancel()
         {
+            StopTicks();
             if (_curtain == null) return;
-            _animation?.Pause();
             _overlayHost?.RemoveFromOverlay(_curtain);
             _curtain = null;
         }
@@ -117,22 +136,42 @@ namespace Sharq.Router
             _overlayHost.AddToOverlay(_curtain, OverlayCategory.Transition);
         }
 
-        private void Animate(VisualElement target, float duration, Action<float> step, Action onComplete)
+        private void StopTicks()
+        {
+            _slideTick?.Pause();
+            _slideTick = null;
+            if (_motion.IsPlaying)
+                _motion.Stop(applyRestore: false);
+        }
+
+        /// <summary>
+        /// Percent-based slide helper: same fixed +0.016 / Every(16) as SusMotion, easing via SusEaseUtil.
+        /// </summary>
+        private void AnimatePercent(VisualElement target, float duration, Action<float> step, Action onComplete)
         {
             if (target == null) return;
-            _animation?.Pause();
-            if (duration <= 0.001f) { step(1f); onComplete?.Invoke(); return; }
+            StopTicks();
+            if (duration <= 0.001f)
+            {
+                step(1f);
+                onComplete?.Invoke();
+                return;
+            }
+
             float elapsed = 0f;
-            // Fixed 16ms per tick — matches Every(16). Wall-clock unscaledTime barely
-            // advances when many playmode frames run in a few ms (batchmode/-nographics).
-            _animation = target.schedule.Execute(() =>
+            _slideTick = target.schedule.Execute(() =>
             {
                 elapsed += 0.016f;
                 float t = Mathf.Clamp01(elapsed / duration);
-                step(Mathf.SmoothStep(0f, 1f, t));
-                if (t >= 1f) { _animation?.Pause(); onComplete?.Invoke(); }
+                step(SusEaseUtil.Evaluate(SusEase.QuadInOut, t));
+                if (t >= 1f)
+                {
+                    _slideTick?.Pause();
+                    _slideTick = null;
+                    onComplete?.Invoke();
+                }
             });
-            _animation.Every(16);
+            _slideTick.Every(16);
         }
     }
 }

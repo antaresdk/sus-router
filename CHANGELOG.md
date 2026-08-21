@@ -5,6 +5,18 @@ All notable changes to this package are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.15] - 2026-08-21
+
+### Added
+- `SusTransitionService` on SusMotion — route curtain fades use `SusMotion` / `SusEaseUtil`;
+  `SusRouteTransition` via SusMotion presets (`KeywordNull` = no transition) (T-685, T-1121).
+- `SusModalService.ShowAsync` completes with the modal result (T-683).
+- Router focus lifecycle: `AutoFocus` on route enter, modal focus snapshot / trap / restore (T-677).
+
+### Changed
+- `SusModalLayer` dropped — modals go only through `SusModalService`; the scrim is a `modal-scrim`
+  USS class instead of C# appearance (T-1121, T-1323); package docs tree and gap table follow (T-1471).
+
 ## [1.0.14] - 2026-08-20
 
 ### Fixed

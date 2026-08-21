@@ -1,15 +1,15 @@
 using UnityEngine;
 using UnityEngine.UIElements;
-using UnityEngine.TestTools;
 using NUnit.Framework;
 using System.Collections;
+using System.Reflection;
 using Sharq.Core;
 
 namespace Sharq.Router.Runtime.Tests
 {
     /// <summary>
-    /// T-011 — SusRouteTransition playmode tests.
-    /// Covers: factory helpers, None no-op, PlayIn/PlayOut start state + completion.
+    /// SusRouteTransition tests (EditMode + fixed SusMotion ticks).
+    /// Covers: factory helpers, None no-op, PlayIn/PlayOut start state + KeywordNull.
     /// </summary>
     public class SusRouteTransitionTests
     {
@@ -24,12 +24,16 @@ namespace Sharq.Router.Runtime.Tests
             _doc = _go.GetComponent<UIDocument>();
             _doc.panelSettings = SusTestPanelFactory.Create("SusTestPanelSettings_RouteTransition");
             _root = _doc.rootVisualElement;
+            Assert.IsNotNull(_root);
         }
 
         [TearDown]
         public void TearDown()
         {
             if (_go != null) Object.DestroyImmediate(_go);
+            _go = null;
+            _doc = null;
+            _root = null;
         }
 
         [Test]
@@ -49,70 +53,54 @@ namespace Sharq.Router.Runtime.Tests
             Assert.AreEqual(0.3f, SusRouteTransition.SlideRight().Duration);
         }
 
-        [UnityTest]
-        public IEnumerator None_PlayOut_DoesNotRemoveElement()
+        [Test]
+        public void None_PlayOut_DoesNotRemoveElement()
         {
-            yield return null;
-
             var el = new VisualElement { name = "none-out" };
             _root.Add(el);
 
             SusRouteTransition.None().PlayOut(el);
-            for (int i = 0; i < 5; i++) yield return null;
 
             Assert.AreSame(_root, el.parent, "Duration 0 PlayOut must be a no-op");
         }
 
-        [UnityTest]
-        public IEnumerator None_PlayIn_LeavesElementAttached()
+        [Test]
+        public void None_PlayIn_LeavesElementAttached()
         {
-            yield return null;
-
             var el = new VisualElement { name = "none-in" };
             _root.Add(el);
 
             SusRouteTransition.None().PlayIn(el);
-            for (int i = 0; i < 5; i++) yield return null;
 
             Assert.AreSame(_root, el.parent);
         }
 
-        [UnityTest]
-        public IEnumerator Fade_PlayOut_SchedulesWithoutThrowing()
+        [Test]
+        public void Fade_PlayOut_SchedulesWithoutThrowing()
         {
-            yield return null;
-
             var el = new VisualElement { name = "fade-out" };
             el.style.opacity = 1f;
             _root.Add(el);
 
             Assert.DoesNotThrow(() => SusRouteTransition.Fade(0.05f).PlayOut(el));
-            yield return null;
-            // Full DOM removal depends on UITK schedule ticks; under -nographics
-            // batchmode those may not advance. Completion is covered by Pause()+Remove
-            // in SusRouteTransition and by None()/PlayIn start-state tests.
             Assert.IsNotNull(el);
+            Assert.IsNotNull(TryGetActiveMotion(el));
         }
 
-        [UnityTest]
-        public IEnumerator Fade_PlayIn_SetsInitialOutState()
+        [Test]
+        public void Fade_PlayIn_SetsInitialOutState()
         {
-            yield return null;
-
             var el = new VisualElement { name = "fade-in" };
             _root.Add(el);
 
             SusRouteTransition.Fade(0.3f).PlayIn(el);
-            // Assert immediately — first schedule tick may already advance opacity
             Assert.LessOrEqual(el.style.opacity.value, 0.05f);
             Assert.AreSame(_root, el.parent);
         }
 
-        [UnityTest]
-        public IEnumerator SlideLeft_PlayIn_SetsInitialOffset()
+        [Test]
+        public void SlideLeft_PlayIn_SetsInitialOffset()
         {
-            yield return null;
-
             var el = new VisualElement { name = "slide-in" };
             _root.Add(el);
 
@@ -122,12 +110,65 @@ namespace Sharq.Router.Runtime.Tests
             Assert.AreSame(_root, el.parent);
         }
 
-        [UnityTest]
-        public IEnumerator PlayOut_NullElement_DoesNotThrow()
+        [Test]
+        public void PlayOut_NullElement_DoesNotThrow()
         {
-            yield return null;
             Assert.DoesNotThrow(() => SusRouteTransition.Fade().PlayOut(null));
             Assert.DoesNotThrow(() => SusRouteTransition.Fade().PlayIn(null));
+        }
+
+        [Test]
+        public void Fade_PlayIn_KeywordNull_ClearsInlineOpacity()
+        {
+            var el = new VisualElement { name = "fade-in-null" };
+            _root.Add(el);
+
+            SusRouteTransition.Fade(0.048f).PlayIn(el);
+            var motion = TryGetActiveMotion(el);
+            Assert.IsNotNull(motion, "PlayIn should start SusMotion on target");
+
+            AdvanceFixed(motion, 5);
+
+            Assert.AreEqual(StyleKeyword.Null, el.style.opacity.keyword);
+            Assert.AreSame(_root, el.parent);
+        }
+
+        [Test]
+        public void Fade_PlayOut_KeywordNull_ThenRemoves()
+        {
+            var el = new VisualElement { name = "fade-out-null" };
+            el.style.opacity = 1f;
+            _root.Add(el);
+
+            SusRouteTransition.Fade(0.048f).PlayOut(el);
+            var motion = TryGetActiveMotion(el);
+            Assert.IsNotNull(motion, "PlayOut should start SusMotion on target");
+
+            AdvanceFixed(motion, 5);
+
+            Assert.AreEqual(StyleKeyword.Null, el.style.opacity.keyword);
+            Assert.IsNull(el.parent, "PlayOut must remove from hierarchy after complete");
+        }
+
+        static SusMotion TryGetActiveMotion(VisualElement el)
+        {
+            var field = typeof(SusMotion).GetField(
+                "ActiveByTarget",
+                BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.IsNotNull(field, "SusMotion.ActiveByTarget");
+            var dict = field.GetValue(null) as IDictionary;
+            Assert.IsNotNull(dict);
+            return dict.Contains(el) ? dict[el] as SusMotion : null;
+        }
+
+        static void AdvanceFixed(SusMotion motion, int ticks)
+        {
+            var method = typeof(SusMotion).GetMethod(
+                "AdvanceFixedTickForTests",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.IsNotNull(method, "SusMotion.AdvanceFixedTickForTests");
+            for (int i = 0; i < ticks; i++)
+                method.Invoke(motion, null);
         }
     }
 }

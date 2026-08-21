@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -7,7 +8,7 @@ namespace Sharq.Router
 {
     /// <summary>
     /// Route transition: code-based animation (not USS transition-property — not supported in Unity).
-    /// Animate opacity/translate over time via schedule.Execute.
+    /// Built on <see cref="SusMotion"/> / <see cref="SusMotionPresets"/> (fixed +0.016 ticks via Every(16)).
     ///
     /// Transitions:
     ///   Fade       — opacity 1↔0
@@ -16,6 +17,8 @@ namespace Sharq.Router
     /// </summary>
     public class SusRouteTransition
     {
+        const float SlideOffsetPx = 30f;
+
         /// <summary>Transition type identifier (informational).</summary>
         public string Id { get; }
 
@@ -34,101 +37,64 @@ namespace Sharq.Router
         public static SusRouteTransition SlideRight(float durationS = 0.3f) => new("slide-right", durationS);
 
         // ════════════════════════════════════════════════════════════════
-        //  PlayOut / PlayIn — code-based, no USS transition-property
+        //  PlayOut / PlayIn — SusMotion presets; KeywordNull + remove on out
         // ════════════════════════════════════════════════════════════════
 
         /// <summary>
-        /// Animate element out over Duration.
-        /// 1. Record initial opacity / translate
-        /// 2. Schedule incremental updates until opacity reaches 0
-        /// 3. After Duration: remove from DOM
+        /// Animate element out over Duration, then remove from hierarchy.
+        /// PlayOut ≈ QuadInOut; restore <see cref="SusRestoreMode.KeywordNull"/>.
         /// </summary>
         public void PlayOut(VisualElement element)
         {
             if (Duration <= 0f || element == null) return;
 
-            var startOpacity = element.resolvedStyle.opacity;
-            var startTranslate = element.resolvedStyle.translate;
-            var startX = startTranslate.x;
-            var startY = startTranslate.y;
-            float elapsed = 0f;
-            IVisualElementScheduledItem item = null;
-
-            // Accumulate ~16ms per schedule tick (Every(16)). Wall-clock
-            // realtimeSinceStartup barely advances under batchmode/-nographics
-            // when many frames execute in a few ms — animations would never finish.
-            item = element.schedule.Execute(() =>
+            Action remove = () =>
             {
-                elapsed += 0.016f;
-                float t = Mathf.Clamp01(elapsed / Duration);
-                // Ease-in-out
-                t = t < 0.5f ? 2f * t * t : -1f + (4f - 2f * t) * t;
+                if (element.parent != null)
+                    element.RemoveFromHierarchy();
+            };
 
-                element.style.opacity = Mathf.Lerp(startOpacity, 0f, t);
+            if (Id == "fade")
+            {
+                // Mirror SusMotionPresets.FadeOut with PlayOut ease (QuadInOut) + remove.
+                SusMotion.On(element)
+                    .Opacity(0f, Duration, SusEase.QuadInOut)
+                    .Restore(SusRestoreMode.KeywordNull)
+                    .Play(remove);
+                return;
+            }
 
-                if (IsSlide())
-                {
-                    float targetX = Id == "slide-left" ? startX - 30f : startX + 30f;
-                    element.style.translate = new Translate(
-                        Mathf.Lerp(startX, targetX, t),
-                        startY);
-                }
-
-                if (t >= 1f)
-                {
-                    element.style.opacity = StyleKeyword.Null;
-                    element.style.translate = StyleKeyword.Null;
-                    if (element.parent != null)
-                        element.parent.Remove(element);
-                    item?.Pause();
-                }
-            }).Every(16); // ~60 FPS
+            if (IsSlide())
+            {
+                float dx = Id == "slide-left" ? -SlideOffsetPx : SlideOffsetPx;
+                // Mirror SusMotionPresets.SlideOut (+ remove on complete).
+                SusMotion.On(element)
+                    .Opacity(0f, Duration, SusEase.QuadInOut)
+                    .Translate(new Vector2(dx, 0f), Duration, SusEase.QuadInOut)
+                    .Restore(SusRestoreMode.KeywordNull)
+                    .Play(remove);
+            }
         }
 
         /// <summary>
-        /// Animate element in over Duration.
-        /// 1. Set opacity to 0, offset X for slide
-        /// 2. Schedule incremental updates to opacity 1 / translate 0
+        /// Animate element in over Duration from the "out" start-state.
+        /// PlayIn ≈ QuadOut via <see cref="SusMotionPresets"/>; restore KeywordNull.
         /// </summary>
         public void PlayIn(VisualElement element)
         {
             if (Duration <= 0f || element == null) return;
 
-            // Start from "out" state
-            element.style.opacity = 0f;
-            if (IsSlide())
+            if (Id == "fade")
             {
-                float offsetX = Id == "slide-left" ? -30f : 30f;
-                element.style.translate = new Translate(offsetX, 0);
+                SusMotionPresets.FadeIn(element, Duration, SusRestoreMode.KeywordNull);
+                return;
             }
 
-            float elapsed = 0f;
-            IVisualElementScheduledItem item = null;
-
-            item = element.schedule.Execute(() =>
+            if (IsSlide())
             {
-                elapsed += 0.016f;
-                float t = Mathf.Clamp01(elapsed / Duration);
-                // Ease-out
-                t = 1f - (1f - t) * (1f - t);
-
-                element.style.opacity = Mathf.Lerp(0f, 1f, t);
-
-                if (IsSlide())
-                {
-                    float startOffset = Id == "slide-left" ? -30f : 30f;
-                    element.style.translate = new Translate(
-                        Mathf.Lerp(startOffset, 0f, t),
-                        0);
-                }
-
-                if (t >= 1f)
-                {
-                    element.style.opacity = StyleKeyword.Null;
-                    element.style.translate = StyleKeyword.Null;
-                    item?.Pause();
-                }
-            }).Every(16);
+                float dx = Id == "slide-left" ? -SlideOffsetPx : SlideOffsetPx;
+                SusMotionPresets.SlideIn(element, new Vector2(dx, 0f), Duration, SusRestoreMode.KeywordNull);
+            }
         }
 
         private bool IsSlide() => Id == "slide-left" || Id == "slide-right";

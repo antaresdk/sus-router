@@ -8,6 +8,8 @@
 
 # Sharq UI System Router
 
+English · [简体中文](./README.zh-CN.md)
+
 **SUS Router** (`com.sharq-it.sus.router`) — navigation for SUS, a **vue-router** analog for Unity UI Toolkit. Screens, nested routes,
 guards, keep-alive, modals, and transitions on top of `sus-core`.
 

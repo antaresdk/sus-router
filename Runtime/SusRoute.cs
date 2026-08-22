@@ -218,8 +218,14 @@ namespace Sharq.Router
 
         /// <summary>
         /// A sentinel route representing "no route" (used as fromRoute on first navigation).
+        /// Returns a fresh instance on every access (T-1117 / R-C5): a single shared
+        /// <c>static readonly</c> instance would let one caller's <see cref="Props"/>/<see cref="IsActive"/>/
+        /// <see cref="Screen"/> write (or a mutation of the exposed <see cref="Params"/>/<see cref="Query"/>
+        /// dictionaries) leak into every later "no route" read for the rest of the domain-reload
+        /// session (Enter Play Mode with domain reload disabled keeps statics alive across Play
+        /// sessions). The constructor is cheap — no shared caches to allocate around.
         /// </summary>
-        public static readonly SusRoute None = new SusRoute(null, "<none>", null);
+        public static SusRoute None => new SusRoute(null, "<none>", null);
 
         public SusRoute(SusRouteRecord record, string fullPath, Dictionary<string, string> @params)
         {

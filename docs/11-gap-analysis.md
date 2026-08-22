@@ -1,7 +1,8 @@
-# 11. Roadmap (Gap Analysis vs Vue Router)
+# 11. API Coverage vs Vue Router
 
-> **1 July 2026.** Full gap analysis of SusRouter v0.2.6 against Vue Router 4.
-> **Updated 1 July 2026 (evening):** fixes from audit `SUSROUTER_AUDIT_FIXES.md`.
+<!-- sus:gen ver pkg=sus-router -->
+> **SusRouter 1.0.15** — full API coverage comparison against Vue Router 4.
+<!-- /sus:gen -->
 > Coverage: **27 of 27** key APIs (100%) with caveats — see below.
 
 ## Big picture
@@ -16,19 +17,6 @@
 | Modals + dim (SusModalService) | ✅ 2/2 |
 | Helpers (router-link with [UxmlElement]+Text, active-link, beforeRouteUpdate with global guards) | ✅ 5/5 |
 | Optimization (lazy loading, KeepAlive LRU) | ✅ 2/2 |
-
-## Fixes 1 July 2026 (SUSROUTER_AUDIT_FIXES.md)
-
-| Fix | Status |
-|---|---|
-| Real transition animations (transitionProperty + duration) | ✅ |
-| Unified modal mechanism (Modal → ModalService) | ✅ |
-| beforeRouteUpdate + global guards | ✅ |
-| Re-entrancy protection (_isNavigating) | ✅ |
-| KeepAlive LRU eviction (MaxKeepAlive=10) | ✅ |
-| [UxmlElement] + SusRouteLink.Text | ✅ |
-| beforeResolve BEFORE screen creation | ✅ |
-| SusModalLayer removed (ModalService only) | ✅ |
 
 > **Caveat:** nested routes — URL nesting only, no layout wrapper or nested `<router-view>`. Async guards — sync for now (TODO).
 
@@ -64,9 +52,7 @@ Update params on the same route without recreating the screen.
 
 ### C.1 `beforeResolve`
 
-Global guard. Called BEFORE `BeforeEnter`/screen creation (step 5.5 in NavigateCore). On abort there are no side effects from a created screen.
-
-**Fixed 1 July:** moved before `Activator.CreateInstance` (previously after, which left orphaned screens).
+Global guard. Called BEFORE `BeforeEnter`/screen creation (step 5.5 in NavigateCore, ahead of `Activator.CreateInstance`). On abort there are no side effects from a created screen.
 
 ### C.2 Query params
 

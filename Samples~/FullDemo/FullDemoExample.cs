@@ -211,7 +211,7 @@ namespace Sharq.Router.Examples
 
             navTabs.OnChanged += path =>
             {
-                _router.Push(path);
+                _router.Push(path); // sus:route-ok
                 navTabs.SetValue(_router.CurrentRoute.Value?.Record?.Path ?? "/dashboard");
             };
 
@@ -457,7 +457,7 @@ namespace Sharq.Router.Examples
                     chip.RegisterCallback<ClickEvent>(_ =>
                     {
                         var id = user.Split('(')[1].TrimEnd(')').Split(':')[1].Trim();
-                        Router.Push($"/users/{id}");
+                        Router.Push($"/users/{id}"); // sus:route-ok
                     });
                     Add(chip);
                 }

@@ -52,9 +52,9 @@ namespace Sharq.Router
         {
             if (Router == null || string.IsNullOrEmpty(To)) return;
             if (Mode == LinkMode.Replace)
-                Router.Replace(To);
+                Router.Replace(To); // sus:route-ok
             else
-                Router.Push(To);
+                Router.Push(To); // sus:route-ok
             evt.StopPropagation();
         }
 

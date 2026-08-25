@@ -76,7 +76,7 @@ namespace Sharq.Router.Examples
 
             _navTabs.OnChanged += path =>
             {
-                _router.Push(path);
+                _router.Push(path); // sus:route-ok
                 _navTabs.SetValue(_router.CurrentRoute.Value?.Record?.Path ?? "/counter");
             };
 

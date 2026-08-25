@@ -149,7 +149,7 @@ namespace Sharq.Router.Examples
                     _router.NavigateWithTransition(path, 0.3f);
                 else
                 {
-                    _router.Push(path);
+                    _router.Push(path); // sus:route-ok
                     navTabs.SetValue(_router.CurrentRoute.Value?.Record?.Path ?? "/page-1");
                 }
             };

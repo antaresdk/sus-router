@@ -131,7 +131,7 @@ namespace Sharq.Router.Examples
 
             navTabs.OnChanged += path =>
             {
-                var result = _router.Push(path);
+                var result = _router.Push(path); // sus:route-ok
                 navTabs.SetValue(_router.CurrentRoute.Value?.Record?.Path ?? "/home");
                 if (result == NavigationResult.Busy)
                     Debug.Log("[Guards] Router busy — request dropped.");
@@ -425,7 +425,7 @@ namespace Sharq.Router.Examples
                 {
                     IsDirty = false;
                     CloseModal();
-                    Router.Push(to.FullPath);
+                    Router.Push(to.FullPath); // sus:route-ok
                 };
                 btnRow.Add(leaveBtn);
                 card.Add(btnRow);

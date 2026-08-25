@@ -136,7 +136,7 @@ namespace Sharq.Router.Examples
                 else if (path == "/settings")
                     _router.PushNamed("settings");
                 else
-                    _router.Push(path);
+                    _router.Push(path); // sus:route-ok
                 _navTabs.SetValue(_router.CurrentRoute.Value?.Record?.Path ?? "/main-menu");
             };
 
@@ -262,7 +262,7 @@ namespace Sharq.Router.Examples
                 }, "/settings/profile");
                 childTabs.OnChanged += p =>
                 {
-                    Router.Push(p);
+                    Router.Push(p); // sus:route-ok
                     childTabs.SetValue(Router.CurrentRoute.Value?.Record?.Path ?? "/settings/profile");
                 };
                 Add(childTabs.Root);

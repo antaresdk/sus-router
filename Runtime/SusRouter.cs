@@ -38,8 +38,11 @@ namespace Sharq.Router
     /// </summary>
     public class NavigationError
     {
+        /// <summary>Outcome of the failed navigation.</summary>
         public NavigationResult Result;
+        /// <summary>Route being left, or <see cref="SusRoute.None"/> when there is no current route.</summary>
         public SusRoute From;
+        /// <summary>Intended target of the failed navigation.</summary>
         public SusRoute To;
         /// <summary>Which guard/lifecycle hook rejected the navigation: "CanLeave", "BeforeEach", "CanEnter", "BeforeEnter", "BeforeResolve", "BeforeEnter(screen)".</summary>
         public string RejectedBy;
@@ -135,12 +138,21 @@ namespace Sharq.Router
         // ─── Visual container references ───
         private SusRouteView _routeView;
 
+        /// <summary>
+        /// Currently displayed route. <see cref="Prop{T}.Value"/> is null until the first
+        /// successful navigation.
+        /// </summary>
         public Prop<SusRoute> CurrentRoute { get; } = new Prop<SusRoute>();
 
+        /// <summary>True when the history cursor is past the oldest entry (<see cref="Back"/> can succeed).</summary>
         public bool CanGoBack => _historyIndex > 0;
+        /// <summary>True when the history cursor is before the newest entry (<see cref="Forward"/> can succeed).</summary>
         public bool CanGoForward => _historyIndex >= 0 && _historyIndex < _history.Count - 1;
+        /// <summary>Read-only history stack. Index 0 is oldest; <see cref="HistoryIndex"/> is the cursor.</summary>
         public IReadOnlyList<SusRoute> History => _history.AsReadOnly();
+        /// <summary>Cursor into <see cref="History"/>. <see cref="Push(string, Dictionary{string, object})"/> increments; <see cref="Back"/> decrements.</summary>
         public int HistoryIndex => _historyIndex;
+        /// <summary>Number of registered routes (not history length).</summary>
         public int RouteCount => _routes.Count;
 
         /// <summary>
@@ -353,6 +365,10 @@ namespace Sharq.Router
         //  Global guards
         // ════════════════════════════════════════════════════════════════
 
+        /// <summary>
+        /// Registers a global guard run on every navigation after <c>CanLeave</c> and before <c>CanEnter</c>.
+        /// Return <c>false</c> to abort. Analogous to Vue Router <c>beforeEach</c>.
+        /// </summary>
         public void BeforeEach(SusRouterGuard guard)
         {
             if (guard != null)
@@ -370,6 +386,10 @@ namespace Sharq.Router
                 _beforeResolveGuards.Add(guard);
         }
 
+        /// <summary>
+        /// Registers a hook run after a successful navigation, once <see cref="CurrentRoute"/> is updated.
+        /// Analogous to Vue Router <c>afterEach</c>.
+        /// </summary>
         public void AfterEach(SusRouterAfterHook hook)
         {
             if (hook != null)
@@ -402,6 +422,10 @@ namespace Sharq.Router
         //  Navigation
         // ════════════════════════════════════════════════════════════════
 
+        /// <summary>
+        /// Navigates to <paramref name="path"/>, pushing a new history entry (truncates the forward tail).
+        /// Returns <see cref="NavigationResult.NotFound"/> when no route matches.
+        /// </summary>
         public NavigationResult Push(string path, Dictionary<string, object> props = null)
         {
             var record = Resolve(path);
@@ -415,6 +439,10 @@ namespace Sharq.Router
             return NavigateToRecord(record, path, props, isReplace: false);
         }
 
+        /// <summary>
+        /// Navigates to <paramref name="path"/>, replacing the current history entry.
+        /// Returns <see cref="NavigationResult.NotFound"/> when no route matches.
+        /// </summary>
         public NavigationResult Replace(string path, Dictionary<string, object> props = null)
         {
             var record = Resolve(path);
@@ -428,6 +456,10 @@ namespace Sharq.Router
             return NavigateToRecord(record, path, props, isReplace: true);
         }
 
+        /// <summary>
+        /// Pushes the named route, filling <c>:param</c> placeholders from <paramref name="pathParams"/>.
+        /// Returns <see cref="NavigationResult.NotFound"/> when the name is unknown or params are missing.
+        /// </summary>
         public NavigationResult PushNamed(string name,
             Dictionary<string, string> pathParams = null,
             Dictionary<string, object> props = null)
@@ -445,6 +477,10 @@ namespace Sharq.Router
             return NavigateToRecord(record, path, props, isReplace: false);
         }
 
+        /// <summary>
+        /// Replaces the current history entry with the named route.
+        /// Returns <see cref="NavigationResult.NotFound"/> when the name is unknown or params are missing.
+        /// </summary>
         public NavigationResult ReplaceNamed(string name,
             Dictionary<string, string> pathParams = null,
             Dictionary<string, object> props = null)
@@ -462,6 +498,10 @@ namespace Sharq.Router
             return NavigateToRecord(record, path, props, isReplace: true);
         }
 
+        /// <summary>
+        /// Builds a concrete path for the named route using <paramref name="pathParams"/>.
+        /// Returns null when the name is unknown or required params are missing.
+        /// </summary>
         public string ResolvePath(string name, Dictionary<string, string> pathParams = null)
         {
             if (!_namedRoutes.TryGetValue(name, out var record))
@@ -522,6 +562,10 @@ namespace Sharq.Router
             return Navigate(fromRoute, toRoute, isReplace, stepOffset: 0);
         }
 
+        /// <summary>
+        /// Moves the history cursor one entry back. Returns <see cref="NavigationResult.CantGoBack"/>
+        /// when already at the oldest entry.
+        /// </summary>
         public NavigationResult Back()
         {
             if (!CanGoBack)
@@ -535,6 +579,10 @@ namespace Sharq.Router
             return Navigate(fromRoute, toRoute, isReplace: false, stepOffset: -1);
         }
 
+        /// <summary>
+        /// Moves the history cursor one entry forward. Returns <see cref="NavigationResult.CantGoForward"/>
+        /// when already at the newest entry.
+        /// </summary>
         public NavigationResult Forward()
         {
             if (!CanGoForward)
@@ -548,6 +596,10 @@ namespace Sharq.Router
             return Navigate(fromRoute, toRoute, isReplace: false, stepOffset: +1);
         }
 
+        /// <summary>
+        /// Moves the history cursor by <paramref name="n"/> entries (positive = forward, negative = back).
+        /// Stops and returns the first non-success result if a step cannot complete.
+        /// </summary>
         public NavigationResult Go(int n)
         {
             if (n > 0)
@@ -629,6 +681,10 @@ namespace Sharq.Router
         //  Active-route checks
         // ════════════════════════════════════════════════════════════════
 
+        /// <summary>
+        /// Returns true if <paramref name="path"/> (query stripped) matches any history entry's path.
+        /// For the current route including query, use <see cref="IsRouteActiveExact"/>.
+        /// </summary>
         public bool IsRouteActive(string path)
         {
             // Strip query for comparison
@@ -646,6 +702,10 @@ namespace Sharq.Router
             return false;
         }
 
+        /// <summary>
+        /// Returns true if <see cref="CurrentRoute"/>'s <see cref="SusRoute.FullPath"/> equals
+        /// <paramref name="path"/> (query included).
+        /// </summary>
         public bool IsRouteActiveExact(string path)
         {
             return CurrentRoute.Value?.FullPath == path;
@@ -1101,6 +1161,10 @@ namespace Sharq.Router
             CurrentRoute.Value = route;
         }
 
+        /// <summary>
+        /// Opens a modal dialog of <paramref name="dialogType"/> via <see cref="ModalService"/>.
+        /// Requires <see cref="Init"/> / Mount so an overlay host exists.
+        /// </summary>
         public void Modal(Type dialogType, Dictionary<string, object> props = null)
         {
             var modal = ModalService?.Show(dialogType, props);
@@ -1118,6 +1182,10 @@ namespace Sharq.Router
             ModalService?.Close();
         }
 
+        /// <summary>
+        /// Assigns the outlet that renders the current route. Mount creates one;
+        /// call this only for a custom outlet.
+        /// </summary>
         public void SetRouteView(SusRouteView view)
         {
             _routeView = view;
@@ -1127,6 +1195,12 @@ namespace Sharq.Router
         //  Init / Mount
         // ════════════════════════════════════════════════════════════════
 
+        /// <summary>
+        /// Wires overlay services (<see cref="ModalService"/>, <see cref="TransitionService"/>,
+        /// <see cref="OverlayServices"/>) onto <paramref name="overlayHost"/> and registers
+        /// a BeforeEach that closes all modals on navigation. No-op if already initialized;
+        /// Mount calls this when no overlay host exists yet.
+        /// </summary>
         public void Init(OverlayHost overlayHost)
         {
             if (overlayHost == null)
@@ -1156,6 +1230,14 @@ namespace Sharq.Router
             });
         }
 
+        /// <summary>
+        /// Low-level mount: creates a <see cref="SusRouteView"/> on <paramref name="container"/>
+        /// (or its <see cref="ScreenHost"/> slot), ensures an overlay host, then
+        /// <see cref="Replace(string, Dictionary{string, object})"/>s to <paramref name="initialPath"/>.
+        /// Prefer <c>SusApp.UseRouter</c> — it runs this at the documented <see cref="SusApp"/>
+        /// finalization point (after the token cascade and layer scaffold, before the theme).
+        /// Use this overload for tests, extra panels, or hosts that already applied TSS/scaffold.
+        /// </summary>
         public NavigationResult Mount(VisualElement container, string initialPath,
             Dictionary<string, object> props = null)
         {
@@ -1192,6 +1274,11 @@ namespace Sharq.Router
             return Replace(initialPath, props);
         }
 
+        /// <summary>
+        /// Convenience overload of <see cref="Mount(VisualElement, string, Dictionary{string, object})"/>
+        /// targeting <paramref name="uiDocument"/>.rootVisualElement. Same low-level contract;
+        /// prefer <c>SusApp.UseRouter</c> for application entry.
+        /// </summary>
         public NavigationResult Mount(UIDocument uiDocument, string initialPath,
             Dictionary<string, object> props = null)
         {
@@ -1204,6 +1291,10 @@ namespace Sharq.Router
         //  Utilities
         // ════════════════════════════════════════════════════════════════
 
+        /// <summary>
+        /// Fills <c>:param</c> placeholders in <paramref name="record"/>.Path from <paramref name="pathParams"/>.
+        /// Returns the template unchanged when there are no params; null when required params are missing.
+        /// </summary>
         public static string BuildPath(SusRouteRecord record, Dictionary<string, string> pathParams)
         {
             if (record.ParamNames.Count == 0)

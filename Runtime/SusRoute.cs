@@ -94,6 +94,11 @@ namespace Sharq.Router
 
         private readonly Regex _matchRegex;
 
+        /// <summary>
+        /// Creates a registered route: <paramref name="path"/> template (e.g. <c>/users/:id</c>),
+        /// <paramref name="screenType"/> (a <see cref="SusScreen"/>, or null when
+        /// <see cref="SusRouteConfig.LazyFactory"/> is set), and optional <paramref name="config"/>.
+        /// </summary>
         public SusRouteRecord(string path, Type screenType, SusRouteConfig config = null)
         {
             Path = path ?? throw new ArgumentNullException(nameof(path));
@@ -227,6 +232,11 @@ namespace Sharq.Router
         /// </summary>
         public static SusRoute None => new SusRoute(null, "<none>", null);
 
+        /// <summary>
+        /// Active history entry: resolved <paramref name="record"/>, concrete
+        /// <paramref name="fullPath"/> (query string is parsed into <see cref="Query"/>),
+        /// and extracted path <paramref name="params"/>.
+        /// </summary>
         public SusRoute(SusRouteRecord record, string fullPath, Dictionary<string, string> @params)
         {
             Record = record;

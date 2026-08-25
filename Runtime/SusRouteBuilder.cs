@@ -80,16 +80,27 @@ namespace Sharq.Router
         // ── Fluent config. Each returns `this` so options chain; Route()/Children() below
         //    return the owner / new scope to continue the tree. ──
 
+        /// <summary>Sets the route name used by <see cref="SusRouter.PushNamed"/> / <see cref="SusRouter.ReplaceNamed"/>.</summary>
         public SusRouteEntry Name(string name) { _config.Name = name; return this; }
+        /// <summary>Keeps the screen instance alive off-DOM when leaving this route (default <c>true</c> when called with no args).</summary>
         public SusRouteEntry KeepAlive(bool keepAlive = true) { _config.KeepAlive = keepAlive; return this; }
+        /// <summary>When this route is pushed, navigate to <paramref name="path"/> instead.</summary>
         public SusRouteEntry Redirect(string path) { _config.Redirect = path; return this; }
+        /// <summary>Lazy screen factory (alternative to <c>Activator.CreateInstance</c> on the registered type).</summary>
         public SusRouteEntry Lazy(Func<SusScreen> factory) { _config.LazyFactory = factory; return this; }
+        /// <summary>Per-route <see cref="ISusRouteGuard"/> (<c>CanEnter</c> / <c>CanLeave</c>).</summary>
         public SusRouteEntry Guard(ISusRouteGuard guard) { _config.Guard = guard; return this; }
+        /// <summary>Function-based beforeEnter guard. Runs after <see cref="ISusRouteGuard.CanEnter"/> when both are set.</summary>
         public SusRouteEntry BeforeEnter(SusRouterGuard guard) { _config.BeforeEnter = guard; return this; }
+        /// <summary>Per-route enter/leave animation (<see cref="SusRouteTransition"/> factories).</summary>
         public SusRouteEntry Transition(SusRouteTransition transition) { _config.Transition = transition; return this; }
+        /// <summary>When <c>true</c>, path matching is case-sensitive. Default of the config is case-insensitive.</summary>
         public SusRouteEntry CaseSensitive(bool value = true) { _config.CaseSensitive = value; return this; }
+        /// <summary>When <c>true</c>, trailing slash is significant (<c>/about</c> ≠ <c>/about/</c>).</summary>
         public SusRouteEntry Strict(bool value = true) { _config.Strict = value; return this; }
+        /// <summary>Default props merged into the screen (after <see cref="SusRouteConfig.PropsFn"/>, before query/params/Push props).</summary>
         public SusRouteEntry Props(Dictionary<string, object> props) { _config.DefaultProps = props; return this; }
+        /// <summary>Functional props: called with the resolved route; merged first, then <see cref="Props"/> and explicit Push props.</summary>
         public SusRouteEntry PropsFn(Func<SusRoute, Dictionary<string, object>> fn) { _config.PropsFn = fn; return this; }
 
         /// <summary>Adds one or more alternative paths that resolve to this route.</summary>

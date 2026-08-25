@@ -31,9 +31,13 @@ namespace Sharq.Router
             Duration = durationS;
         }
 
+        /// <summary>No animation (duration 0). Incoming screen appears immediately.</summary>
         public static SusRouteTransition None() => new(null, 0);
+        /// <summary>Fade opacity 1↔0 over <paramref name="durationS"/> seconds (default 0.3).</summary>
         public static SusRouteTransition Fade(float durationS = 0.3f) => new("fade", durationS);
+        /// <summary>Fade plus translate X -30↔0 (leave toward the left / enter from the left offset).</summary>
         public static SusRouteTransition SlideLeft(float durationS = 0.3f) => new("slide-left", durationS);
+        /// <summary>Fade plus translate X +30↔0 (leave toward the right / enter from the right offset).</summary>
         public static SusRouteTransition SlideRight(float durationS = 0.3f) => new("slide-right", durationS);
 
         // ════════════════════════════════════════════════════════════════

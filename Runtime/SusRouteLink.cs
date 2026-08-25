@@ -33,6 +33,10 @@ namespace Sharq.Router
         /// <summary>Reference to the router (set via Bind()).</summary>
         public SusRouter Router { get; private set; }
 
+        /// <summary>
+        /// Clickable navigation element. Set <see cref="To"/> / <see cref="Exact"/> / <see cref="Mode"/>,
+        /// then <see cref="Bind"/> to a <see cref="SusRouter"/>.
+        /// </summary>
         public SusRouteLink()
         {
             this.AddToClassList("sus-route-link");

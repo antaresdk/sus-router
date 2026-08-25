@@ -26,6 +26,10 @@ namespace Sharq.Router
         /// <summary>Reference to the owning router.</summary>
         public SusRouter Router { get; set; }
 
+        /// <summary>
+        /// Route outlet. <see cref="SusRouter.Mount"/> creates one and adds
+        /// <see cref="RootUssClassName"/>. Nested outlets omit the root class.
+        /// </summary>
         public SusRouteView()
         {
             AddToClassList(UssClassName);

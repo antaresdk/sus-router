@@ -24,14 +24,14 @@ namespace Sharq.Router.Examples
             try { BuildUI(); }
             catch (Exception ex)
             {
-                Debug.LogError($"[Nested] OnEnable failed: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
+                SusLog.Error($"[Nested] OnEnable failed: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
             }
         }
 
         private void BuildUI()
         {
             var doc = _uiDocument != null ? _uiDocument : GetComponent<UIDocument>();
-            if (doc == null) { Debug.LogError("[Nested] No UIDocument found!"); return; }
+            if (doc == null) { SusLog.Error("[Nested] No UIDocument found!"); return; }
 
             var ps = Resources.Load<PanelSettings>("PanelSettings");
             if (ps != null) doc.panelSettings = ps;
@@ -72,7 +72,7 @@ namespace Sharq.Router.Examples
 
             var backBtn = MakeButton("<- Back");
             backBtn.style.marginLeft = 8;
-            backBtn.clicked += () => Debug.Log($"[Router] Back → {_router.Back()}");
+            backBtn.clicked += () => SusLog.Verbose($"[Router] Back → {_router.Back()}");
             navBar.Add(backBtn);
 
             screens.Add(navBar);
@@ -116,14 +116,14 @@ namespace Sharq.Router.Examples
             {
                 LazyFactory = () =>
                 {
-                    Debug.Log("[LazyFactory] Creating screen on first access");
+                    SusLog.Verbose("[LazyFactory] Creating screen on first access");
                     return new LabelScreen { LabelText = "Lazy Screen (loaded on demand)" };
                 }
             });
 
             _router.BeforeEach((from, to) =>
             {
-                Debug.Log($"[beforeEach] {from.FullPath} → {to.FullPath}");
+                SusLog.Verbose($"[beforeEach] {from.FullPath} → {to.FullPath}");
                 return true;
             });
 
@@ -147,12 +147,12 @@ namespace Sharq.Router.Examples
 
                 if (n?.Query?.Count > 0)
                 {
-                    Debug.Log($"[Router] Query params: q={n.Query.GetValueOrDefault("q")}, " +
+                    SusLog.Verbose($"[Router] Query params: q={n.Query.GetValueOrDefault("q")}, " +
                         $"page={n.Query.GetValueOrDefault("page")}");
                 }
             };
 
-            Debug.Log("[Nested] Ready. Tab navigation with named/nested/query/lazy routes.");
+            SusLog.Verbose("[Nested] Ready. Tab navigation with named/nested/query/lazy routes.");
         }
 
         internal static Button MakeButton(string text)
@@ -299,7 +299,7 @@ namespace Sharq.Router.Examples
 
             protected override bool OnBeforeEnter(SusRoute from)
             {
-                Debug.Log($"[Battle] BeforeEnter ← {from.FullPath}. id={GetParam("id")}");
+                SusLog.Verbose($"[Battle] BeforeEnter ← {from.FullPath}. id={GetParam("id")}");
                 return true;
             }
         }

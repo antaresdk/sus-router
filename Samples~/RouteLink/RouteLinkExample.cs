@@ -76,7 +76,7 @@ namespace Sharq.Router.Examples
             screens.Add(contentContainer);
 
             var result = _router.Mount(contentContainer, "/home");
-            Debug.Log($"[RouteLink] Mount: {result}");
+            SusLog.Verbose($"[RouteLink] Mount: {result}");
 
             _homeLink.Bind(_router);
             _battleLink.Bind(_router);
@@ -93,11 +93,11 @@ namespace Sharq.Router.Examples
             if (Input.GetKeyDown(KeyCode.B)) _router.Push("/battle/42");
             if (Input.GetKeyDown(KeyCode.S)) _router.Push("/settings");
             if (Input.GetKeyDown(KeyCode.LeftArrow))
-                Debug.Log($"[RouteLink] Back → {_router.Back()}");
+                SusLog.Verbose($"[RouteLink] Back → {_router.Back()}");
             if (Input.GetKeyDown(KeyCode.RightArrow))
-                Debug.Log($"[RouteLink] Forward → {_router.Forward()}");
+                SusLog.Verbose($"[RouteLink] Forward → {_router.Forward()}");
             if (Input.GetKeyDown(KeyCode.L))
-                Debug.Log($"[RouteLink] Current: {_router.CurrentRoute.Value?.FullPath}, " +
+                SusLog.Verbose($"[RouteLink] Current: {_router.CurrentRoute.Value?.FullPath}, " +
                     $"CanGoBack={_router.CanGoBack}, CanGoForward={_router.CanGoForward}");
         }
 
@@ -173,7 +173,7 @@ namespace Sharq.Router.Examples
             }
             protected override bool OnBeforeEnter(SusRoute from)
             {
-                Debug.Log($"[Screen] {GetType().Name} ← {from.FullPath}");
+                SusLog.Verbose($"[Screen] {GetType().Name} ← {from.FullPath}");
                 return true;
             }
         }

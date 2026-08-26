@@ -28,14 +28,14 @@ namespace Sharq.Router.Examples
             try { BuildUI(); }
             catch (Exception ex)
             {
-                Debug.LogError($"[BasicRouting] OnEnable failed: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
+                SusLog.Error($"[BasicRouting] OnEnable failed: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
             }
         }
 
         private void BuildUI()
         {
             var doc = _uiDocument != null ? _uiDocument : GetComponent<UIDocument>();
-            if (doc == null) { Debug.LogError("[BasicRouting] No UIDocument found!"); return; }
+            if (doc == null) { SusLog.Error("[BasicRouting] No UIDocument found!"); return; }
 
             var ps = Resources.Load<PanelSettings>("PanelSettings");
             if (ps != null) doc.panelSettings = ps;
@@ -284,7 +284,7 @@ namespace Sharq.Router.Examples
                 Add(emailField);
 
                 var submitBtn = MakeButton("Submit");
-                submitBtn.clicked += () => Debug.Log("[Contact] Submitted");
+                submitBtn.clicked += () => SusLog.Verbose("[Contact] Submitted");
                 Add(submitBtn);
             }
         }

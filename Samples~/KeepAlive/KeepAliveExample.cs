@@ -25,14 +25,14 @@ namespace Sharq.Router.Examples
             try { BuildUI(); }
             catch (Exception ex)
             {
-                Debug.LogError($"[KeepAlive] OnEnable failed: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
+                SusLog.Error($"[KeepAlive] OnEnable failed: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
             }
         }
 
         private void BuildUI()
         {
             var doc = _uiDocument != null ? _uiDocument : GetComponent<UIDocument>();
-            if (doc == null) { Debug.LogError("[KeepAlive] No UIDocument found!"); return; }
+            if (doc == null) { SusLog.Error("[KeepAlive] No UIDocument found!"); return; }
 
             var ps = Resources.Load<PanelSettings>("PanelSettings");
             if (ps != null) doc.panelSettings = ps;
@@ -86,7 +86,7 @@ namespace Sharq.Router.Examples
                     _navTabs.SetValue(n.Record.Path);
             };
 
-            Debug.Log("[KeepAlive] Ready. Switch tabs to test KeepAlive.");
+            SusLog.Verbose("[KeepAlive] Ready. Switch tabs to test KeepAlive.");
         }
 
         internal static Button MakeButton(string text)
@@ -181,7 +181,7 @@ namespace Sharq.Router.Examples
 
             protected override bool OnBeforeEnter(SusRoute from)
             {
-                Debug.Log($"[Counter] BeforeEnter ← {from.FullPath}. Count={_count}");
+                SusLog.Verbose($"[Counter] BeforeEnter ← {from.FullPath}. Count={_count}");
                 return true;
             }
         }
@@ -213,7 +213,7 @@ namespace Sharq.Router.Examples
 
             protected override bool OnBeforeEnter(SusRoute from)
             {
-                Debug.Log($"[Form] BeforeEnter ← {from.FullPath}");
+                SusLog.Verbose($"[Form] BeforeEnter ← {from.FullPath}");
                 return true;
             }
         }
@@ -244,7 +244,7 @@ namespace Sharq.Router.Examples
 
             protected override bool OnBeforeEnter(SusRoute from)
             {
-                Debug.Log($"[Settings] BeforeEnter ← {from.FullPath} (no KeepAlive — always fresh)");
+                SusLog.Verbose($"[Settings] BeforeEnter ← {from.FullPath} (no KeepAlive — always fresh)");
                 return true;
             }
         }

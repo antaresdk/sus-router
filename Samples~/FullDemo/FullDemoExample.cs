@@ -31,14 +31,14 @@ namespace Sharq.Router.Examples
             try { BuildUI(); }
             catch (Exception ex)
             {
-                Debug.LogError($"[FullDemo] OnEnable failed: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
+                SusLog.Error($"[FullDemo] OnEnable failed: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
             }
         }
 
         private void BuildUI()
         {
             var doc = _uiDocument != null ? _uiDocument : GetComponent<UIDocument>();
-            if (doc == null) { Debug.LogError("[FullDemo] No UIDocument found!"); return; }
+            if (doc == null) { SusLog.Error("[FullDemo] No UIDocument found!"); return; }
 
             var ps = Resources.Load<PanelSettings>("PanelSettings");
             if (ps != null) doc.panelSettings = ps;
@@ -139,7 +139,7 @@ namespace Sharq.Router.Examples
             backBtn.clicked += () =>
             {
                 var result = _router.Back();
-                Debug.Log($"[FullDemo] Back result: {result}");
+                SusLog.Verbose($"[FullDemo] Back result: {result}");
                 UpdateChip();
             };
             backFwdRow.Add(backBtn);
@@ -149,7 +149,7 @@ namespace Sharq.Router.Examples
             fwdBtn.clicked += () =>
             {
                 var result = _router.Forward();
-                Debug.Log($"[FullDemo] Forward result: {result}");
+                SusLog.Verbose($"[FullDemo] Forward result: {result}");
                 UpdateChip();
             };
             backFwdRow.Add(fwdBtn);
@@ -174,13 +174,13 @@ namespace Sharq.Router.Examples
 
             _router.BeforeEach((from, to) =>
             {
-                Debug.Log($"[FullDemo beforeEach] {from.FullPath} → {to.FullPath}");
+                SusLog.Verbose($"[FullDemo beforeEach] {from.FullPath} → {to.FullPath}");
                 return true;
             });
 
             _router.AfterEach((from, to) =>
             {
-                Debug.Log($"[FullDemo afterEach] Done: {to.FullPath}");
+                SusLog.Verbose($"[FullDemo afterEach] Done: {to.FullPath}");
             });
 
             _router.Register("/dashboard", typeof(DashboardScreen), new SusRouteConfig
@@ -223,7 +223,7 @@ namespace Sharq.Router.Examples
             };
 
             UpdateChip();
-            Debug.Log("[FullDemo] Ready. All features active.");
+            SusLog.Verbose("[FullDemo] Ready. All features active.");
         }
 
         private void UpdateChip()
@@ -328,13 +328,13 @@ namespace Sharq.Router.Examples
         {
             public bool CanEnter(SusRoute from, SusRoute to)
             {
-                Debug.Log($"[UserDetailGuard] CanEnter: {from.FullPath} → {to.FullPath}");
+                SusLog.Verbose($"[UserDetailGuard] CanEnter: {from.FullPath} → {to.FullPath}");
                 return true;
             }
 
             public bool CanLeave(SusRoute from, SusRoute to)
             {
-                Debug.Log($"[UserDetailGuard] CanLeave: {from.FullPath} → {to.FullPath}");
+                SusLog.Verbose($"[UserDetailGuard] CanLeave: {from.FullPath} → {to.FullPath}");
                 return true;
             }
         }
@@ -427,7 +427,7 @@ namespace Sharq.Router.Examples
 
             protected override bool OnBeforeEnter(SusRoute from)
             {
-                Debug.Log($"[Dashboard] BeforeEnter ← {from.FullPath}");
+                SusLog.Verbose($"[Dashboard] BeforeEnter ← {from.FullPath}");
                 return true;
             }
         }
@@ -469,7 +469,7 @@ namespace Sharq.Router.Examples
 
             protected override bool OnBeforeEnter(SusRoute from)
             {
-                Debug.Log($"[Users] BeforeEnter ← {from.FullPath}");
+                SusLog.Verbose($"[Users] BeforeEnter ← {from.FullPath}");
                 return true;
             }
         }
@@ -505,7 +505,7 @@ namespace Sharq.Router.Examples
                 Add(activeToggle);
 
                 var saveBtn = MakeButton("Save");
-                saveBtn.clicked += () => Debug.Log($"[UserDetail] Saved user #{id}");
+                saveBtn.clicked += () => SusLog.Verbose($"[UserDetail] Saved user #{id}");
                 Add(saveBtn);
 
                 var backBtn = MakeButton("Back to Users");
@@ -516,13 +516,13 @@ namespace Sharq.Router.Examples
 
             protected override bool OnBeforeEnter(SusRoute from)
             {
-                Debug.Log($"[UserDetail] BeforeEnter ← {from.FullPath}. id={GetParam("id")}");
+                SusLog.Verbose($"[UserDetail] BeforeEnter ← {from.FullPath}. id={GetParam("id")}");
                 return true;
             }
 
             protected override bool OnBeforeLeave(SusRoute to)
             {
-                Debug.Log($"[UserDetail] BeforeLeave → {to.FullPath}");
+                SusLog.Verbose($"[UserDetail] BeforeLeave → {to.FullPath}");
                 return true;
             }
         }
@@ -558,7 +558,7 @@ namespace Sharq.Router.Examples
 
             protected override bool OnBeforeEnter(SusRoute from)
             {
-                Debug.Log($"[Settings] BeforeEnter ← {from.FullPath}");
+                SusLog.Verbose($"[Settings] BeforeEnter ← {from.FullPath}");
                 return true;
             }
         }
@@ -636,7 +636,7 @@ namespace Sharq.Router.Examples
                 var msg = Props.TryGetValue("message", out var m) ? m?.ToString() : "";
                 _titleLabel.text = title;
                 _msgLabel.text = msg;
-                Debug.Log($"[AboutDialog] Shown: title='{title}' msg='{msg}'");
+                SusLog.Verbose($"[AboutDialog] Shown: title='{title}' msg='{msg}'");
             }
         }
     }

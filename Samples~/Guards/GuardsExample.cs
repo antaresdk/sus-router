@@ -28,14 +28,14 @@ namespace Sharq.Router.Examples
             try { BuildUI(); }
             catch (Exception ex)
             {
-                Debug.LogError($"[Guards] OnEnable failed: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
+                SusLog.Error($"[Guards] OnEnable failed: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
             }
         }
 
         private void BuildUI()
         {
             var doc = _uiDocument != null ? _uiDocument : GetComponent<UIDocument>();
-            if (doc == null) { Debug.LogError("[Guards] No UIDocument found!"); return; }
+            if (doc == null) { SusLog.Error("[Guards] No UIDocument found!"); return; }
 
             var ps = Resources.Load<PanelSettings>("PanelSettings");
             if (ps != null) doc.panelSettings = ps;
@@ -49,7 +49,7 @@ namespace Sharq.Router.Examples
                 if (stray.name == "sus-splash-screen" || stray.name == "sus-loading-screen")
                 {
                     stray.RemoveFromHierarchy();
-                    Debug.Log($"[Guards] Removed stray overlay: {stray.name}");
+                    SusLog.Verbose($"[Guards] Removed stray overlay: {stray.name}");
                 }
             }
 
@@ -109,7 +109,7 @@ namespace Sharq.Router.Examples
                 if (to.FullPath == "/home") return true;
                 if (!_isLoggedIn)
                 {
-                    Debug.Log($"[Guard] beforeEach BLOCKED: {from.FullPath} → {to.FullPath}");
+                    SusLog.Verbose($"[Guard] beforeEach BLOCKED: {from.FullPath} → {to.FullPath}");
                     _statusChip.text = "Login required";
                     return false;
                 }
@@ -134,7 +134,7 @@ namespace Sharq.Router.Examples
                 var result = _router.Push(path); // sus:route-ok
                 navTabs.SetValue(_router.CurrentRoute.Value?.Record?.Path ?? "/home");
                 if (result == NavigationResult.Busy)
-                    Debug.Log("[Guards] Router busy — request dropped.");
+                    SusLog.Verbose("[Guards] Router busy — request dropped.");
             };
 
             _router.CurrentRoute.Changed += (o, n) =>
@@ -144,7 +144,7 @@ namespace Sharq.Router.Examples
                 UpdateStatusChip();
             };
 
-            Debug.Log("[Guards] Ready.");
+            SusLog.Verbose("[Guards] Ready.");
         }
 
         private void UpdateStatusChip()
@@ -227,7 +227,7 @@ namespace Sharq.Router.Examples
             {
                 if (AdminScreen.IsDirty)
                 {
-                    Debug.Log("[AdminGuard] CanLeave: blocked — form is dirty");
+                    SusLog.Verbose("[AdminGuard] CanLeave: blocked — form is dirty");
                     if (!AdminScreen.IsShowingLeaveModal)
                         AdminScreen.ShowLeaveConfirmation?.Invoke(from, to);
                     return false;

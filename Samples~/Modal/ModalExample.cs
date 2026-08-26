@@ -25,14 +25,14 @@ namespace Sharq.Router.Examples
             try { BuildUI(); }
             catch (Exception ex)
             {
-                Debug.LogError($"[Modal] OnEnable failed: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
+                SusLog.Error($"[Modal] OnEnable failed: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
             }
         }
 
         private void BuildUI()
         {
             var doc = _uiDocument != null ? _uiDocument : GetComponent<UIDocument>();
-            if (doc == null) { Debug.LogError("[Modal] No UIDocument found!"); return; }
+            if (doc == null) { SusLog.Error("[Modal] No UIDocument found!"); return; }
 
             var ps = Resources.Load<PanelSettings>("PanelSettings");
             if (ps != null) doc.panelSettings = ps;
@@ -160,7 +160,7 @@ namespace Sharq.Router.Examples
                     navTabs.SetValue(n.Record.Path);
             };
 
-            Debug.Log("[Modal] Ready. Use buttons to open modals, tabs to switch pages.");
+            SusLog.Verbose("[Modal] Ready. Use buttons to open modals, tabs to switch pages.");
         }
 
         private void BuildModalControls(OverlayHost overlayHost)
@@ -287,7 +287,7 @@ namespace Sharq.Router.Examples
             {
                 var path = Router?.CurrentRoute?.Value?.FullPath ?? "?";
                 _titleLabel.text = $"Page {path}";
-                Debug.Log($"[PageScreen] BeforeEnter ← {from.FullPath}");
+                SusLog.Verbose($"[PageScreen] BeforeEnter ← {from.FullPath}");
                 return true;
             }
         }
@@ -333,7 +333,7 @@ namespace Sharq.Router.Examples
             {
                 var msg = Props.TryGetValue("message", out var v) ? v?.ToString() : "Confirm?";
                 _msgLabel.text = msg;
-                Debug.Log($"[ConfirmDialog] Shown: '{msg}'");
+                SusLog.Verbose($"[ConfirmDialog] Shown: '{msg}'");
             }
         }
 
@@ -369,7 +369,7 @@ namespace Sharq.Router.Examples
                 var title = Props.TryGetValue("title", out var t) ? t?.ToString() : "Info";
                 var msg = Props.TryGetValue("message", out var m) ? m?.ToString() : "";
                 _bodyLabel.text = $"{title}:\n{msg}";
-                Debug.Log($"[InfoDialog] Shown: '{title}' / '{msg}'");
+                SusLog.Verbose($"[InfoDialog] Shown: '{title}' / '{msg}'");
             }
         }
     }

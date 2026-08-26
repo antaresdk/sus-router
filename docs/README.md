@@ -19,6 +19,7 @@
 | 7 | [Running the samples](./10-examples.md) | 7 samples: BasicRouting, KeepAlive, Guards, Modals, Nested+Named, RouteLink, FullDemo |
 | 8 | [Gap Analysis vs Vue Router](./11-gap-analysis.md) | Phases A/B/C: what is implemented, what is deferred |
 | 9 | [Glossary](./12-glossary.md) | Terms: Record, Route, Guard, KeepAlive, Overlay, Props, Query |
+| — | [快速入门（中文）](./GETTING_STARTED.zh-CN.md) | Chinese getting-started (manual sync; EN docs are authoritative) |
 
 
 ## Quick start

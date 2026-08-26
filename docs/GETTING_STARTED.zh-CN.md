@@ -5,18 +5,18 @@
 > 版本号、API 以那份英文文档为准，本文件由 release 角色随发行手动同步，不参与 `docs:loop`
 > 自动打标。
 
-**前置条件：** 先安装并跑通 `sus-core`（见
-[`sus-core/Docs/GETTING_STARTED.zh-CN.md`](../../sus-core/Docs/GETTING_STARTED.zh-CN.md)）。
+**前置条件：** 先安装并跑通 `sus-core`（见产品网站
+[快速入门](https://sus-ui.dev/docs/getting-started)）。
 本包只负责导航，响应式/编译器/主题/overlay 都在 `sus-core`。
 
-**适用引擎：** Unity 6000.3 及以上（全球版 Unity 6），与 `sus-core` 要求一致。
+**适用引擎：** Unity 6000.3 及以上（全球版 Unity 6），与 `sus-core` 要求一致。 <!-- sus:ok -->
 
 ---
 
 ## 1. 安装
 
 ```
-https://github.com/antaresdk/sus-router.git#v1.0.15
+https://github.com/antaresdk/sus-router.git#v1.0.15 <!-- sus:ok -->
 ```
 
 （权威版本号见英文 [README.md](../README.md) 顶部的自动生成区块。）

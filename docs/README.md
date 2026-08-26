@@ -2,7 +2,7 @@
 
 <!-- sus:gen ver pkg=sus-router -->
 > **Package:** `com.sharq-it.sus.router`  
-> **Version:** 1.0.15  
+> **Version:** 1.0.16  
 <!-- /sus:gen -->
 > **SUS UI router** — Vue Router analog: navigation, screens, modals, KeepAlive, transitions
 
@@ -19,7 +19,7 @@
 | 7 | [Running the samples](./10-examples.md) | 7 samples: BasicRouting, KeepAlive, Guards, Modals, Nested+Named, RouteLink, FullDemo |
 | 8 | [Gap Analysis vs Vue Router](./11-gap-analysis.md) | Phases A/B/C: what is implemented, what is deferred |
 | 9 | [Glossary](./12-glossary.md) | Terms: Record, Route, Guard, KeepAlive, Overlay, Props, Query |
-| — | [快速入门（中文）](./GETTING_STARTED.zh-CN.md) | Chinese getting-started (manual sync; EN docs are authoritative) |
+| — | [快速入门（中文）](https://sus-ui.dev/zh/docs/getting-started) | Chinese getting-started (site, translated; package copy: `GETTING_STARTED.zh-CN.md` in this folder) |
 
 
 ## Quick start

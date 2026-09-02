@@ -1,4 +1,4 @@
-﻿# 4. SusRouteView — visual container
+# 4. SusRouteView — visual container
 
 ## API
 

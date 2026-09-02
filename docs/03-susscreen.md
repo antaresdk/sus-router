@@ -1,4 +1,4 @@
-﻿# 3. SusScreen — screens, lifecycle, and wiring
+# 3. SusScreen — screens, lifecycle, and wiring
 
 A screen (`SusScreen`) is a full-screen view managed by `SusRouter`.
 It inherits `SusComponent`, so it has the full core reactive toolkit

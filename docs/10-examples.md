@@ -1,4 +1,4 @@
-﻿# 10. Running the samples (Samples~)
+# 10. Running the samples (Samples~)
 
 The package ships **7 standalone samples** under `Samples~/`. UI chrome uses **standard Unity UI Toolkit** controls (`Button`, `Label`, `TextField`, `Toggle`, `ScrollView`) — no downstream UI package is required.
 

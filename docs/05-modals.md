@@ -1,4 +1,4 @@
-﻿# 5. Modal dialogs and services
+# 5. Modal dialogs and services
 
 ## SusRouterModal — base class
 

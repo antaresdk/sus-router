@@ -4,6 +4,7 @@ using UnityEngine.TestTools;
 using NUnit.Framework;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Sharq.Core;
 
@@ -305,6 +306,28 @@ namespace Sharq.Router.Runtime.Tests
 
             router.CloseModal();
             Assert.AreEqual(0, router.ModalService.Count);
+        }
+
+        [UnityTest]
+        public IEnumerator Show_WrapperCategory_ReadFromModalLayer_NotServiceLiteral()
+        {
+            // T-2826 (ARCH-20260903-OVERLAY-MOUNT §5 Д4): SusModalService must place the
+            // wrapper in the category the modal's own sealed Layer resolves to
+            // (SusOverlayComponent.ResolvedLayer), not a hardcoded OverlayCategory.Modal
+            // literal duplicating that guarantee. Asserting against modal.ResolvedLayer
+            // (not the OverlayCategory.Modal constant) fails if the two are ever wired
+            // to diverge, which asserting the constant directly would not catch.
+            yield return null;
+
+            var modal = (InfoModal)_svc.Show(typeof(InfoModal));
+            var wrapper = _host.Q("modal-wrapper");
+            Assert.IsNotNull(wrapper);
+
+            var entry = _host.Stack.First(e => e.Element == wrapper);
+            Assert.AreEqual(modal.ResolvedLayer, entry.Category,
+                "wrapper's overlay category must be read from the mounted component's Layer");
+            Assert.AreEqual(OverlayCategory.Modal, modal.ResolvedLayer,
+                "SusModalBase seals Layer to Modal");
         }
 
         [UnityTest]

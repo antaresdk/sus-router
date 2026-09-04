@@ -28,6 +28,26 @@ namespace Sharq.Router
     ///   var answer = await router.ModalService.ShowAsync&lt;string&gt;(typeof(MyDialog));
     ///   // Inside the dialog:
     ///   Complete("ok"); // or Dismiss() for cancel/default
+    ///
+    /// Mounting mechanic — service, NOT self (ARCH-20260903-OVERLAY-MOUNT §4/§5 Д3): this type
+    /// and every subclass are mounted into the overlay from OUTSIDE, by
+    /// <see cref="SusModalService"/> (<c>ShowCore</c> wraps the instance in a
+    /// <c>modal-wrapper</c>/<c>modal-content</c> box and calls <c>OverlayHost.AddToOverlay</c>
+    /// itself). Do NOT call the self-mount API this class inherits from
+    /// <see cref="SusModalBase"/> — <c>OpenInOverlay</c> / <c>CloseFromOverlay</c> (or the
+    /// lower-level <c>MountSelfInOverlay</c> / <c>UnmountSelfFromOverlay</c> on
+    /// <see cref="SusOverlayComponent"/>) — from a <see cref="SusRouterModal"/>: the instance is
+    /// already parented inside the service's wrapper/contentBox, so self-mounting would rip it
+    /// out of there and re-add it a SECOND time (double mount), corrupting the service's stack
+    /// bookkeeping. No type in this family calls these members, and none should.
+    ///
+    /// Because mounting is service-owned, this family has no per-instance open/closed prop —
+    /// unlike self-mounting overlay primitives (tooltip, popup, toast), a router modal instance
+    /// is created fresh by <see cref="SusModalService.Show"/> and only ever exists while shown;
+    /// there is no closed state for a prop to distinguish. "Open" for this family is expressed
+    /// by the instance's existence on the service's stack, observable via
+    /// <see cref="SusModalService.CountProp"/> (reactive stack depth) or
+    /// <see cref="SusModalService.Count"/>.
     /// </summary>
     public abstract class SusRouterModal : SusModalBase
     {

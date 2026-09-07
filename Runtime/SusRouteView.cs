@@ -73,7 +73,9 @@ namespace Sharq.Router
             {
                 if (toRoute.Screen.parent != this)
                     Add(toRoute.Screen);
-                toRoute.Screen.style.flexGrow = 1f;
+                // `.sus-grow` (sus-core SusRuntime/_global.uss) replaces the inline
+                // flex-grow the active screen used to get here (R120/D-069).
+                toRoute.Screen.EnableInClassList(GrowClass, true);
                 toRoute.IsActive = true;
 
                 if (toRoute != fromRoute)

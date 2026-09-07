@@ -63,10 +63,13 @@ namespace Sharq.Router
             EnsureCurtain();
             var c = _curtain;
             float start = direction == TransitionStyle.SlideLeft ? -100f : 100f;
-            c.style.translate = new Translate(Length.Percent(start), 0, 0);
-            c.style.opacity = 1f;
+            c.style.translate = new Translate(Length.Percent(start), 0, 0);  // sus:uss-impossible tween start frame of the slide
+            // Drop any inline opacity left by a previous fade instead of forcing the
+            // constant 1 - the USS cascade owns the curtain's opacity again (R120/D-069).
+            c.style.opacity = StyleKeyword.Null;
             // Percent translate — SusMotion uses px; keep shared SusEaseUtil tick model.
             AnimatePercent(c, duration * 0.5f,
+                // sus:uss-impossible interpolated tween frame value
                 t => c.style.translate = new Translate(Length.Percent(Mathf.Lerp(start, 0f, t)), 0, 0),
                 onComplete);
         }
@@ -76,9 +79,10 @@ namespace Sharq.Router
             if (_curtain == null) return;
             var c = _curtain;
             _curtain = null;
-            c.style.opacity = 1f;
+            c.style.opacity = StyleKeyword.Null;
             float end = direction == TransitionStyle.SlideLeft ? 100f : -100f;
             AnimatePercent(c, duration * 0.5f,
+                // sus:uss-impossible interpolated tween frame value
                 t => c.style.translate = new Translate(Length.Percent(Mathf.Lerp(0f, end, t)), 0, 0),
                 () => _overlayHost?.RemoveFromOverlay(c));
         }

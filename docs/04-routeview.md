@@ -28,9 +28,13 @@ SusRouter.Navigate(from, to)
 SusRouteView.OnRouteChanged(from, to):
     1. if !KeepAlive → from.Screen.parent.Remove(from.Screen)   ← detach + drop
        if  KeepAlive → Remove(from.Screen) + CacheKeepAliveScreen(key, screen)  ← detach + cache
-    2. Add(to.Screen)                                           ← add new/cached screen
-    3. to.Screen.style.flexGrow = 1; CurrentScreen = to.Screen
+    2. Add(to.Screen); to.Screen.EnableInClassList(GrowClass, true)  ← add + grow via `.sus-grow` class
+    3. CurrentScreen = to.Screen
 ```
+
+`.sus-grow` (a `sus-core` companion class, `flex-grow: 1`) replaces what used to be an inline
+`style.flexGrow` write — see [Design tokens §1.4](https://sus-ui.dev/docs/guide/DESIGN_TOKENS) for why a switch like this is
+always a class, never a direct style write.
 
 Transitions (`PlayIn`/`PlayOut`) are driven by `SusRouter` around this swap.
 

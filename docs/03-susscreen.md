@@ -17,7 +17,7 @@ public class HomeScreen : SusScreen
 {
     protected override void Build()
     {
-        style.flexGrow = 1f;
+        AddToClassList("home-screen"); // companion USS: .home-screen { flex-grow: 1; }
         Add(new Label("Home"));
 
         var btn = new Button { text = "Go to About" };
@@ -26,6 +26,9 @@ public class HomeScreen : SusScreen
     }
 }
 ```
+
+Layout on the screen root is a USS class like any other component, not `style.flexGrow` — see
+[Design tokens §1.4](https://sus-ui.dev/docs/guide/DESIGN_TOKENS).
 
 `Build()` builds the tree (from `SusComponent`). `Router` and `Props` are
 **not** set yet in `Build()` — read them from `OnBeforeEnter()` / `OnEntered()`.

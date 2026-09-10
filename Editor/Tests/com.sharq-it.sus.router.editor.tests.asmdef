@@ -3,14 +3,16 @@
     "rootNamespace": "Sharq.Router.Editor.Tests",
     "references": [
         "com.sharq-it.sus.core",
-        "com.sharq-it.sus.router"
+        "com.sharq-it.sus.router",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
     ],
     "includePlatforms": [
         "Editor"
     ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
-    "overrideReferences": false,
+    "overrideReferences": true,
     "precompiledReferences": [
         "nunit.framework.dll"
     ],

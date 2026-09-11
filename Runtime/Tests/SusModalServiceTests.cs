@@ -311,7 +311,7 @@ namespace Sharq.Router.Runtime.Tests
         [UnityTest]
         public IEnumerator Show_WrapperCategory_ReadFromModalLayer_NotServiceLiteral()
         {
-            // T-2826 (ARCH-20260903-OVERLAY-MOUNT §5 Д4): SusModalService must place the
+            // T-2826 (ARCH-20260903-OVERLAY-MOUNT §5 decision 4): SusModalService must place the
             // wrapper in the category the modal's own sealed Layer resolves to
             // (SusOverlayComponent.ResolvedLayer), not a hardcoded OverlayCategory.Modal
             // literal duplicating that guarantee. Asserting against modal.ResolvedLayer

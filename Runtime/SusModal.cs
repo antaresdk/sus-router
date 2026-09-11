@@ -29,7 +29,7 @@ namespace Sharq.Router
     ///   // Inside the dialog:
     ///   Complete("ok"); // or Dismiss() for cancel/default
     ///
-    /// Mounting mechanic — service, NOT self (ARCH-20260903-OVERLAY-MOUNT §4/§5 Д3): this type
+    /// Mounting mechanic — service, NOT self (ARCH-20260903-OVERLAY-MOUNT §4/§5 decision 3): this type
     /// and every subclass are mounted into the overlay from OUTSIDE, by
     /// <see cref="SusModalService"/> (<c>ShowCore</c> wraps the instance in a
     /// <c>modal-wrapper</c>/<c>modal-content</c> box and calls <c>OverlayHost.AddToOverlay</c>

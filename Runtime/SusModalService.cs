@@ -203,7 +203,7 @@ namespace Sharq.Router
             // so BeforeDismiss / Dismissed / CountProp stay consistent.
             // Category read from the modal's own sealed Layer (SusModalBase → Modal), not
             // duplicated here as a literal — see SusOverlayComponent.ResolvedLayer
-            // (ARCH-20260903-OVERLAY-MOUNT §5 Д4 / T-2826).
+            // (ARCH-20260903-OVERLAY-MOUNT §5 decision 4 / T-2826).
             var overlayEntry = OverlayHost.AddToOverlay(wrapper, modal.ResolvedLayer,
                 dismissOnClickOutside: false);
 

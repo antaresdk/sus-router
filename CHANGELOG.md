@@ -5,6 +5,17 @@ All notable changes to this package are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.17] - 2026-09-11
+
+### Changed
+- Test assemblies declare `overrideReferences: true` and reference the Unity Test Runner assemblies explicitly, so the package compiles the same way inside a consuming project as it does in the development project (T-3224).
+- Four remaining inline `.style` writes converted to USS classes / marker classes, per the styles-from-code rule (T-2982, campaign T-2973).
+- `SusModalService` reads `modal.ResolvedLayer` instead of the `OverlayCategory.Modal` literal (T-2826).
+
+### Fixed
+- `SusRouterModal` XML documentation states the self-mount ban for the family and what "open" means (T-2827).
+- Package docs: styles-from-code rule refreshed (T-3008); leading UTF-8 BOM stripped from `docs/03,04,05,10,12` (T-2605); install URLs restamped for `sus-core` v1.0.31.
+
 ## [1.0.16] - 2026-08-26
 
 ### Changed

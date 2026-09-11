@@ -1,7 +1,7 @@
 # 11. API Coverage vs Vue Router
 
 <!-- sus:gen ver pkg=sus-router -->
-> **SusRouter 1.0.17** — full API coverage comparison against Vue Router 4.
+> **SusRouter 1.0.18** — full API coverage comparison against Vue Router 4.
 <!-- /sus:gen -->
 > Coverage: **27 of 27** key APIs (100%) with caveats — see below.
 

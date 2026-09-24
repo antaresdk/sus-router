@@ -5,6 +5,19 @@ All notable changes to this package are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.20] - 2026-09-25
+
+### Added
+- `SusScreen.Leaving(SusRoute toRoute)` and `protected virtual void OnLeaving(SusRoute toRoute)`: called once per leave for every screen that leaves the active route chain (removed from the tree or moved into the KeepAlive cache), after all leave/enter guards and before any screen is detached, in leaf-to-root order, so `parent` and `panel` are still live. Use it to undo decorations a nested screen applied to its shell. Not called for screens that stay (shared nested-chain prefix, same-record props update) or on KeepAlive eviction (T-4246).
+- `AdvancedRouting` sample: `SettingsScreen` now hosts a `ChildView`, and its nested panes set the shell caption in `OnEntered` and clear it in `OnLeaving`.
+
+### Notes
+- `Left` / `OnLeft` timing is unchanged. The order of `OnLeaving` against `OnLeft` is not part of the contract.
+- A `BeforeResolve` guard runs after `OnLeaving`; if it aborts the navigation, the screen stays active although `OnLeaving` was already called.
+
+### Known issues
+- `OnLeft` is not called on some paths: leaving a nested chain for a single-level route, and leaving a KeepAlive leaf of a nested chain (that leaf is also not cached). When the chain root changes, and on KeepAlive eviction, `OnLeft` runs after the screen is detached (`panel` is null). Use `OnLeaving` for cleanup that needs the live tree. Tracked as T-4260.
+
 ## [1.0.19] - 2026-09-23
 
 ### Changed

@@ -94,7 +94,7 @@ Push("/battle/42"):
 Leave:
   8. OnBeforeLeave(to)       ← guard, false = cancel
      (then CanLeave, BeforeEach, CanEnter, per-route BeforeEnter)
-  9. OnLeaving(to)           ← every guard passed; screen still in the tree
+  9. OnLeaving(to)           ← leave/enter guards passed; screen still in the tree
  10. OnLeft()
  11. SusRouteView removes screen (or hides on KeepAlive)
  12. Unmounted()            ← SusComponent; NOT called on KeepAlive
@@ -138,13 +138,18 @@ Keep in mind:
 
 - The order of `OnLeaving` against `OnLeft` is not part of the contract. On
   some paths `OnLeft` runs after the screen is already detached (`panel` is
-  null) — when the chain root changes and on KeepAlive eviction — and when a
-  nested chain is left for a single-level route it is currently not called at
-  all. Code that needs the live tree belongs in `OnLeaving`; `OnLeft` stays the
-  place for unsubscribing and releasing resources.
+  null) — when the chain root changes and on KeepAlive eviction. It is
+  currently not called at all when a nested chain is left for a single-level
+  route, and when a KeepAlive screen inside a nested chain is left for a sibling
+  route (`/a/k` → `/a/x`). Code that needs the live tree belongs in
+  `OnLeaving`; `OnLeft` stays the place for unsubscribing and releasing
+  resources.
 - A `BeforeResolve` guard runs after `OnLeaving`. If it aborts the navigation,
-  the screen stays active although `OnLeaving` was already called — make the
-  hook's work cheap to redo in `OnEntered`, or avoid aborting from `BeforeResolve`.
+  the screen stays active although `OnLeaving` was already called (on a
+  single-level route without KeepAlive, `OnLeft` has run too), and
+  `OnEntered` is not called again. Do not abort navigation from
+  `BeforeResolve`; put checks that may cancel a leave into `OnBeforeLeave` or
+  another guard that runs before `OnLeaving`.
 
 ---
 

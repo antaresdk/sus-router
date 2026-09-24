@@ -48,7 +48,7 @@ using Sharq.Router;
 
 public class UserScreen : SusScreen
 {
-    protected override void Entered() => Debug.Log($"user {GetParam("id")}");
+    protected override void OnEntered() => Debug.Log($"user {GetParam("id")}");
 }
 ```
 
@@ -58,6 +58,7 @@ public class UserScreen : SusScreen
 - **Nested routes**: parent stays mounted; child renders into its `ChildView`.
 - **KeepAlive**: off-DOM cached screen instances (LRU), keyed per route.
 - **Guards**: sync + async `BeforeEnter` / `BeforeLeave` / `beforeResolve`.
+- **Leave hooks**: `OnBeforeLeave` guards, `OnLeaving` runs after every guard while the screen is still in the tree (undo shell decorations), `OnLeft` cleans up.
 - **Modals**: `SusModal` / `SusModalService` via the core OverlayHost.
 - **Transitions**: code-based `SusRouteTransition` (e.g. fade).
 

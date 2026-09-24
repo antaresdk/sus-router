@@ -37,7 +37,7 @@ Layout on the screen root is a USS class like any other component, not `style.fl
 
 ## 2. Lifecycle — override `On*` methods
 
-> ⚠️ Important: public `BeforeEnter/Entered/BeforeLeave/Left/BeforeRouteUpdate`
+> ⚠️ Important: public `BeforeEnter/Entered/BeforeLeave/Leaving/Left/BeforeRouteUpdate`
 > are called by **the router itself** — do not override them. Override the
 > **`protected virtual` `On*` hooks** (template-method pattern).
 
@@ -68,7 +68,11 @@ public class BattleScreen : SusScreen
         return true;
     }
 
-    // 5. Screen is being removed — unsubscribe, clean up resources.
+    // 5. Navigation is committed and the screen is still in the tree —
+    //    undo anything it changed on its parents (shell captions, classes).
+    protected override void OnLeaving(SusRoute toRoute) => ClearShellCaption();
+
+    // 6. Screen is being removed — unsubscribe, clean up resources.
     protected override void OnLeft() => CleanupBattle();
 }
 ```
@@ -89,14 +93,58 @@ Push("/battle/42"):
 
 Leave:
   8. OnBeforeLeave(to)       ← guard, false = cancel
-  9. OnLeft()
- 10. SusRouteView removes screen (or hides on KeepAlive)
- 11. Unmounted()            ← SusComponent; NOT called on KeepAlive
+     (then CanLeave, BeforeEach, CanEnter, per-route BeforeEnter)
+  9. OnLeaving(to)           ← every guard passed; screen still in the tree
+ 10. OnLeft()
+ 11. SusRouteView removes screen (or hides on KeepAlive)
+ 12. Unmounted()            ← SusComponent; NOT called on KeepAlive
 ```
 
 With **KeepAlive** the screen is not recreated: `OnLeft()` runs, but the instance
 is hidden (not destroyed); on return — `OnBeforeEnter()` / `OnEntered()` again
 without a new `Build()`.
+
+### `OnLeaving` — last call with a live tree
+
+`OnLeaving(toRoute)` runs once per leave, after every leave and enter guard has
+passed and **before the router detaches any screen**. At that point `parent`,
+`panel` and the screen's ancestors — for example the shell that hosts a nested
+`ChildView` — are all live. Use it to undo what a screen did to its ancestors:
+
+```csharp
+// A nested pane writes a caption into its shell on enter
+// and clears it while the shell is still reachable.
+protected override void OnEntered() =>
+    GetFirstAncestorOfType<SettingsScreen>()?.ShowPane("Profile");
+
+protected override void OnLeaving(SusRoute toRoute) =>
+    GetFirstAncestorOfType<SettingsScreen>()?.ClearPane();
+```
+
+The `AdvancedRouting` sample does exactly this (`SettingsPaneScreen`).
+
+When it is called:
+
+- For **every** screen that leaves the active route chain: screens removed from
+  the tree and screens moved into the KeepAlive cache alike.
+- In **leaf → root** order, so a nested child runs before its parent.
+- **Not** called for a screen that stays: the shared prefix of a nested chain
+  (`/settings/profile` → `/settings/privacy` keeps `/settings`), or a props
+  update of the same screen instance (`OnBeforeRouteUpdate`).
+- **Not** called again when a cached screen is evicted from KeepAlive — it
+  already left the chain.
+
+Keep in mind:
+
+- The order of `OnLeaving` against `OnLeft` is not part of the contract. On
+  some paths `OnLeft` runs after the screen is already detached (`panel` is
+  null) — when the chain root changes and on KeepAlive eviction — and when a
+  nested chain is left for a single-level route it is currently not called at
+  all. Code that needs the live tree belongs in `OnLeaving`; `OnLeft` stays the
+  place for unsubscribing and releasing resources.
+- A `BeforeResolve` guard runs after `OnLeaving`. If it aborts the navigation,
+  the screen stays active although `OnLeaving` was already called — make the
+  hook's work cheap to redo in `OnEntered`, or avoid aborting from `BeforeResolve`.
 
 ---
 

@@ -16,7 +16,9 @@ namespace Sharq.Router
     ///   3. BeforeRouteUpdate(toRoute) → bool — called when route props change
     ///                               on same screen. Return false to block.
     ///   4. BeforeLeave(toRoute) → bool — guard: return false to block navigation away.
-    ///   5. Left()                 — called when the screen is being removed.
+    ///   5. Leaving(toRoute)       — called once all guards passed, while the screen is
+    ///                               still attached (parent and panel are live).
+    ///   6. Left()                 — called when the screen is being removed.
     ///
     /// A SusScreen is always rendered inside a SusRouteView. Layout comes from
     /// USS <c>.sus-screen</c> (absolute fill of the outlet) in SusRuntime/_global.uss.
@@ -147,6 +149,35 @@ namespace Sharq.Router
         /// Override to guard against leaving (e.g., unsaved changes). Return false to block.
         /// </summary>
         protected virtual bool OnBeforeLeave(SusRoute toRoute) => true;
+
+        /// <summary>
+        /// Called by router once the navigation away from this screen has passed every
+        /// leave/enter guard (BeforeLeave, CanLeave, BeforeEach, CanEnter, per-route
+        /// BeforeEnter) and BEFORE any screen is detached from the tree.
+        /// Delegates to <see cref="OnLeaving"/>. Do NOT override this method
+        /// — override OnLeaving instead.
+        /// </summary>
+        public void Leaving(SusRoute toRoute) => OnLeaving(toRoute);
+
+        /// <summary>
+        /// Override to react to this screen leaving the active route chain while it is still
+        /// attached: <c>parent</c>, <c>panel</c> and ancestor elements (for example the shell
+        /// that hosts a nested <see cref="ChildView"/>) are live, so this is the place to undo
+        /// decorations the screen applied to its ancestors.
+        ///
+        /// Called exactly once per leave, for every screen that leaves the active chain —
+        /// screens removed from the tree and screens moved into the KeepAlive cache alike —
+        /// in leaf → root order. Not called for a screen that stays (a shared nested-chain
+        /// prefix, or a same-record props update). Eviction from the KeepAlive cache does not
+        /// call it again: the screen already left the chain.
+        ///
+        /// Order against <see cref="OnLeft"/> is not a contract of this hook: OnLeft keeps its
+        /// existing timing and may run later, outside the tree, or not at all on some paths.
+        /// A BeforeResolve guard runs after this hook; if it aborts the navigation, the screen
+        /// stays active although OnLeaving was already called.
+        /// </summary>
+        /// <param name="toRoute">The route being navigated to.</param>
+        protected virtual void OnLeaving(SusRoute toRoute) { }
 
         /// <summary>
         /// Called by router when this screen is being removed.

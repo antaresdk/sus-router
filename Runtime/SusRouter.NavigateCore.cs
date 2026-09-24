@@ -52,6 +52,9 @@ namespace Sharq.Router
             if (guardResult != NavigationResult.Success)
                 return guardResult;
 
+            // ── Step C.5: Leaving — every outgoing screen, leaf → root, while still attached ──
+            NotifyLeaving(fromRoute, toRoute);
+
             // ── Step D: teardown + BeforeResolve + create/reuse screens (Steps 5, 5.5, 6) ──
             var screenResult = PrepareTargetScreens(fromRoute, toRoute, fromKeepAlive, targetKeepAlive,
                 out int chainNewDepth, out bool hasMultiLevelChain);
@@ -178,6 +181,37 @@ namespace Sharq.Router
             }
 
             return NavigationResult.Success;
+        }
+
+        /// <summary>
+        /// Step C.5: calls <see cref="SusScreen.Leaving"/> on every screen that leaves the
+        /// active chain — after all guards of <see cref="RunNavigationGuards"/> and before
+        /// <see cref="PrepareTargetScreens"/> detaches anything, so each screen still has a
+        /// live parent and panel. Order is leaf → root. Screens of a shared nested-chain
+        /// prefix are reused by Step 6 and are skipped; KeepAlive screens are included
+        /// (they leave the tree for the cache). Runs once per navigation, on the sync and
+        /// the async path alike (both end in <see cref="NavigateCore"/>).
+        /// </summary>
+        private void NotifyLeaving(SusRoute fromRoute, SusRoute toRoute)
+        {
+            var fromScreens = fromRoute.ChainScreens;
+            if (fromScreens != null && fromScreens.Count > 1)
+            {
+                // Same reuse rule as Step 6: levels below the common prefix depth survive
+                // only when the target is itself a multi-level chain.
+                int keep = 0;
+                var toChain = toRoute.MatchedChain;
+                if (toChain != null && toChain.Count > 1)
+                    keep = Math.Min(FindCommonPrefixDepth(fromRoute.MatchedChain, toChain), fromScreens.Count);
+
+                for (int i = fromScreens.Count - 1; i >= keep; i--)
+                    fromScreens[i]?.Leaving(toRoute);
+                return;
+            }
+
+            if (fromRoute.IsActive && fromRoute.Screen != null
+                && !ReferenceEquals(fromRoute.Screen, toRoute.Screen))
+                fromRoute.Screen.Leaving(toRoute);
         }
 
         /// <summary>

@@ -105,8 +105,8 @@ namespace Sharq.Router.Examples
                 Name = "settings",
                 Children = new List<SusRouteRecord>
                 {
-                    new SusRouteRecord("profile", typeof(LabelScreen), new SusRouteConfig { Name = "profile" }),
-                    new SusRouteRecord("privacy", typeof(LabelScreen), new SusRouteConfig { Name = "privacy" })
+                    new SusRouteRecord("profile", typeof(ProfilePaneScreen), new SusRouteConfig { Name = "profile" }),
+                    new SusRouteRecord("privacy", typeof(PrivacyPaneScreen), new SusRouteConfig { Name = "privacy" })
                 }
             });
 
@@ -267,12 +267,58 @@ namespace Sharq.Router.Examples
                 };
                 Add(childTabs.Root);
 
-                var childLabel = new Label("(nested child route content here)");
-                childLabel.style.color = new Color(0.6f, 0.6f, 0.7f);
-                childLabel.style.fontSize = 14;
-                childLabel.style.marginTop = 16;
-                Add(childLabel);
+                _activePane = new Label(NoPaneText);
+                Add(_activePane);
+
+                // Outlet for the nested child routes (/settings/profile, /settings/privacy).
+                var childView = new SusRouteView();
+                RegisterChildView(childView);
+                Add(childView);
             }
+
+            const string NoPaneText = "Active pane: none";
+            Label _activePane;
+
+            // Shell decoration owned by the active child pane: the pane sets it on enter and
+            // clears it in OnLeaving (see SettingsPaneScreen).
+            internal void ShowPane(string paneName) => _activePane.text = "Active pane: " + paneName;
+            internal void ClearPane() => _activePane.text = NoPaneText;
+        }
+
+        /// <summary>
+        /// Nested child pane that decorates its parent shell. The decoration is undone in
+        /// OnLeaving, not OnLeft: OnLeaving runs after every guard and before the router
+        /// detaches anything, so the shell is still an ancestor and the panel is live. By the
+        /// time OnLeft runs the pane (or the whole shell) may already be out of the tree.
+        /// </summary>
+        internal abstract class SettingsPaneScreen : SusScreen
+        {
+            protected abstract string PaneName { get; }
+
+            protected override void Build()
+            {
+                Add(new Label($"{PaneName} pane (nested child route)"));
+            }
+
+            protected override void OnEntered()
+            {
+                GetFirstAncestorOfType<SettingsScreen>()?.ShowPane(PaneName);
+            }
+
+            protected override void OnLeaving(SusRoute toRoute)
+            {
+                GetFirstAncestorOfType<SettingsScreen>()?.ClearPane();
+            }
+        }
+
+        internal sealed class ProfilePaneScreen : SettingsPaneScreen
+        {
+            protected override string PaneName => "Profile";
+        }
+
+        internal sealed class PrivacyPaneScreen : SettingsPaneScreen
+        {
+            protected override string PaneName => "Privacy";
         }
 
         internal class BattleScreen : SusScreen

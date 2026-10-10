@@ -33,6 +33,9 @@ namespace Sharq.Router.Runtime.Tests
 
         static readonly List<string> Log = new();
         static readonly List<ProbeScreen> Instances = new();
+        // Screen type names whose OnBeforeEnter / OnBeforeRouteUpdate return false.
+        static readonly HashSet<string> RejectEnter = new();
+        static readonly HashSet<string> RejectUpdate = new();
 
         // ── Probe screens ────────────────────────────────────────────────────
 
@@ -74,6 +77,10 @@ namespace Sharq.Router.Runtime.Tests
             {
                 Log.Add("Entered:" + GetType().Name);
             }
+
+            protected override bool OnBeforeEnter(SusRoute from) => !RejectEnter.Contains(GetType().Name);
+
+            protected override bool OnBeforeRouteUpdate(SusRoute to) => !RejectUpdate.Contains(GetType().Name);
         }
 
         abstract class ShellScreen : ProbeScreen
@@ -114,6 +121,8 @@ namespace Sharq.Router.Runtime.Tests
         {
             Log.Clear();
             Instances.Clear();
+            RejectEnter.Clear();
+            RejectUpdate.Clear();
 
             _go = new GameObject("TestRouteLeaving", typeof(UIDocument));
             _doc = _go.GetComponent<UIDocument>();
@@ -553,6 +562,114 @@ namespace Sharq.Router.Runtime.Tests
             Assert.AreEqual(0, shell.LeftCount, "shared shell is reused, not left");
             Assert.IsNotNull(shell.panel, "shared shell stays mounted");
             Assert.AreEqual(0, Single<PaneY>().LeftCount);
+        }
+
+        // ── Screen hooks cancel at any level of the target ───────────────────
+
+        [UnityTest]
+        public IEnumerator NestedTargetChildBeforeEnterFalse_Aborted_NoLeft()
+        {
+            yield return MountAt("/b");
+            var b = Single<PageB>();
+            RejectEnter.Add(nameof(PaneX));
+
+            Assert.AreEqual(NavigationResult.Aborted, _router.Push("/a/x"));
+            yield return null;
+
+            Assert.AreEqual("/b", _router.CurrentRoute.Value.FullPath);
+            Assert.AreEqual(0, b.LeftCount, "current screen is not left");
+            Assert.IsNotNull(b.panel, "current screen stays mounted");
+            foreach (var s in Instances)
+                if (s is PaneX || s is ShellA)
+                {
+                    Assert.IsNull(s.panel, s.GetType().Name + " is not mounted");
+                    Assert.AreEqual(0, s.LeftCount);
+                }
+            Assert.IsFalse(Log.Exists(l => l.StartsWith("Entered:")), "no Entered");
+        }
+
+        [UnityTest]
+        public IEnumerator NestedTargetRootBeforeEnterFalse_Aborted()
+        {
+            yield return MountAt("/b");
+            var b = Single<PageB>();
+            RejectEnter.Add(nameof(ShellA));
+
+            Assert.AreEqual(NavigationResult.Aborted, _router.Push("/a/x"));
+            yield return null;
+
+            Assert.AreEqual("/b", _router.CurrentRoute.Value.FullPath);
+            Assert.AreEqual(0, b.LeftCount);
+            Assert.IsNotNull(b.panel);
+            foreach (var s in Instances)
+                if (s is PaneX || s is ShellA) Assert.IsNull(s.panel, s.GetType().Name + " is not mounted");
+            Assert.IsFalse(Log.Exists(l => l.StartsWith("Entered:")), "no Entered");
+        }
+
+        [UnityTest]
+        public IEnumerator SharedPrefixBeforeRouteUpdateFalse_Aborted_PropsRestored()
+        {
+            yield return MountAt("/a/x?k=1");
+            var shell = Single<ShellA>();
+            var x = Single<PaneX>();
+            var before = new Dictionary<string, object>(shell.Props);
+            RejectUpdate.Add(nameof(ShellA));
+
+            Assert.AreEqual(NavigationResult.Aborted, _router.Push("/a/y?k=2"));
+            yield return null;
+
+            Assert.AreEqual(before.Count, shell.Props.Count, "shared prefix Props restored");
+            foreach (var kv in before)
+                Assert.AreEqual(kv.Value, shell.Props[kv.Key], "Props[" + kv.Key + "] restored");
+            Assert.AreEqual(0, x.LeftCount, "leaf is not left");
+            Assert.IsNotNull(x.panel, "leaf stays mounted");
+            Assert.AreEqual(0, shell.LeftCount);
+            Assert.IsFalse(Log.Exists(l => l.StartsWith("Entered:")), "no Entered");
+        }
+
+        [UnityTest]
+        public IEnumerator KeepAliveCachedBeforeEnterFalse_SingleLevel_Aborted_StaysCached()
+        {
+            yield return MountAt("/k1");
+            var k1 = Single<PageK1>();
+            Assert.AreEqual(NavigationResult.Success, _router.Push("/b"));
+            yield return null;
+            Assert.AreEqual(0, k1.LeftCount, "KeepAlive screen cached without OnLeft");
+            RejectEnter.Add(nameof(PageK1));
+
+            Assert.AreEqual(NavigationResult.Aborted, _router.Push("/k1"));
+            yield return null;
+            Assert.AreEqual("/b", _router.CurrentRoute.Value.FullPath);
+            Assert.AreEqual(0, k1.LeftCount, "no Left on abort");
+
+            RejectEnter.Clear();
+            Assert.AreEqual(NavigationResult.Success, _router.Push("/k1"));
+            yield return null;
+            Assert.AreSame(k1, Single<PageK1>(), "still the cached instance");
+            Assert.AreSame(k1, _router.CurrentRoute.Value.Screen);
+        }
+
+        [UnityTest]
+        public IEnumerator KeepAliveCachedBeforeEnterFalse_ChainLevel_Aborted_StaysCached()
+        {
+            yield return MountAt("/a/k");
+            var k = Single<PaneK>();
+            Assert.AreEqual(NavigationResult.Success, _router.Push("/a/y"));
+            yield return null;
+            Assert.AreEqual(0, k.LeftCount, "KeepAlive level cached without OnLeft");
+            var y = Single<PaneY>();
+            RejectEnter.Add(nameof(PaneK));
+
+            Assert.AreEqual(NavigationResult.Aborted, _router.Push("/a/k"));
+            yield return null;
+            Assert.AreEqual("/a/y", _router.CurrentRoute.Value.FullPath);
+            Assert.AreEqual(0, k.LeftCount, "no Left on abort");
+            Assert.AreEqual(0, y.LeftCount, "current leaf is not left");
+
+            RejectEnter.Clear();
+            Assert.AreEqual(NavigationResult.Success, _router.Push("/a/k"));
+            yield return null;
+            Assert.AreSame(k, Single<PaneK>(), "still the cached instance");
         }
 
         // ── Async path ends in the same pass ─────────────────────────────────

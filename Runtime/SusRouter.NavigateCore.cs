@@ -327,6 +327,8 @@ namespace Sharq.Router
 
                 // Build chain screens
                 var chainScreens = new List<SusScreen>();
+                // Props of reused screens before this navigation: restored if any hook cancels.
+                var propsSnapshot = new List<(SusScreen screen, Dictionary<string, object> props)>();
                 for (int i = 0; i < chain.Count; i++)
                 {
                     SusScreen levelScreen;
@@ -336,16 +338,26 @@ namespace Sharq.Router
                     {
                         // Reuse screen from shared prefix — NO recreation
                         levelScreen = fromRoute.ChainScreens[i];
+                        propsSnapshot.Add((levelScreen, levelScreen.Props));
                         levelScreen.Props = toRoute.Props;
-                        levelScreen.BeforeRouteUpdate(toRoute);
+                        if (!levelScreen.BeforeRouteUpdate(toRoute))
+                        {
+                            RestoreProps(propsSnapshot);
+                            return NavigationResult.Aborted;
+                        }
                     }
                     else if (chain[i].Config.KeepAlive
                         && TryTakeKeepAliveLevel(toRoute, chainScreens, i, out var cachedLevel))
                     {
                         // KeepAlive level: reuse the cached instance of this level's own outlet.
                         levelScreen = cachedLevel;
+                        propsSnapshot.Add((levelScreen, levelScreen.Props));
                         levelScreen.Props = toRoute.Props;
-                        levelScreen.BeforeEnter(fromRoute);
+                        if (!levelScreen.BeforeEnter(fromRoute))
+                        {
+                            RestoreProps(propsSnapshot);
+                            return NavigationResult.Aborted;
+                        }
                     }
                     else
                     {
@@ -354,7 +366,12 @@ namespace Sharq.Router
                             ?? (SusScreen)Activator.CreateInstance(record.ScreenType, nonPublic: true);
                         levelScreen.Router = this;
                         levelScreen.Props = toRoute.Props;
-                        levelScreen.BeforeEnter(fromRoute);
+                        if (!levelScreen.BeforeEnter(fromRoute))
+                        {
+                            // Fresh screens of an aborted navigation are dropped without Left().
+                            RestoreProps(propsSnapshot);
+                            return NavigationResult.Aborted;
+                        }
                     }
 
                     chainScreens.Add(levelScreen);
@@ -368,12 +385,14 @@ namespace Sharq.Router
                 // Single-level route — existing logic
                 if (targetKeepAlive && toRoute.IsActive && toRoute.Screen != null)
                 {
-                    toRoute.Screen.BeforeEnter(fromRoute);
+                    if (!toRoute.Screen.BeforeEnter(fromRoute))
+                        return NavigationResult.Aborted;
                 }
                 else if (targetKeepAlive && _routeView != null
                     && _routeView.TryGetKeepAliveScreen(KeepAliveKey(toRoute), out var cachedScreen))
                 {
-                    cachedScreen.BeforeEnter(fromRoute);
+                    if (!cachedScreen.BeforeEnter(fromRoute))
+                        return NavigationResult.Aborted;
                     toRoute.Screen = cachedScreen;
                 }
                 else
@@ -397,6 +416,12 @@ namespace Sharq.Router
             }
 
             return NavigationResult.Success;
+        }
+
+        private static void RestoreProps(List<(SusScreen screen, Dictionary<string, object> props)> snapshot)
+        {
+            foreach (var (screen, props) in snapshot)
+                screen.Props = props;
         }
 
         /// <summary>

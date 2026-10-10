@@ -36,7 +36,7 @@ namespace Sharq.Router
         public SusRoute From;
         /// <summary>Intended target of the failed navigation.</summary>
         public SusRoute To;
-        /// <summary>Which guard/lifecycle hook rejected the navigation: "CanLeave", "BeforeEach", "CanEnter", "BeforeEnter", "BeforeResolve", "BeforeEnter(screen)".</summary>
+        /// <summary>Which guard/lifecycle hook rejected the navigation: "CanLeave", "BeforeEach", "CanEnter", "BeforeEnter", "BeforeResolve", "BeforeEnter(screen)", "BeforeRouteUpdate(screen)".</summary>
         public string RejectedBy;
     }
 }

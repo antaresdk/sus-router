@@ -58,7 +58,7 @@ public class UserScreen : SusScreen
 - **Nested routes**: parent stays mounted; child renders into its `ChildView`.
 - **KeepAlive**: off-DOM cached screen instances (LRU), keyed per route.
 - **Guards**: sync + async `BeforeEnter` / `BeforeLeave` / `beforeResolve`.
-- **Leave hooks**: `OnBeforeLeave` guards, `OnLeaving` runs after every guard while the screen is still in the tree (undo shell decorations), `OnLeft` cleans up.
+- **Leave hooks**: `OnBeforeLeave` guards, `OnLeaving` runs after every guard while the screen is still in the tree (undo shell decorations), `OnLeft` cleans up: once per leave, leaf to root, in the tree, after the last cancellation point. A KeepAlive screen gets no `OnLeft` on leaving, only when the cache evicts it (outside the tree), so tree-dependent cleanup belongs in `OnLeaving`. Full table: `docs/03-susscreen.md`.
 - **Modals**: `SusModal` / `SusModalService` via the core OverlayHost.
 - **Transitions**: code-based `SusRouteTransition` (e.g. fade).
 

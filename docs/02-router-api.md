@@ -131,10 +131,10 @@ Step 1:   BeforeLeave on the current screen
 Step 2:   ISusRouteGuard.CanLeave
 Step 3:   Global BeforeEach
 Step 4:   ISusRouteGuard.CanEnter + SusRouteConfig.BeforeEnter
-Step 5:   Left()
 Step 5.5: BeforeResolve (BEFORE screen creation)
 Step 6:   Create / KeepAlive reuse + BeforeEnter (screen)
 Step 7:   Stack update
+Step 7.5: Left() on leaving screens (leaf -> root, in the tree, after the last cancellation point)
 Step 8:   OnRouteChanged
 Step 9:   Entered()
 Step 10:  CurrentRoute + AfterEach
@@ -204,5 +204,6 @@ router.Register("/lazy", null, new SusRouteConfig { LazyFactory = () => new MySc
 
 - Leave: DOM-detach → `Unmounted()`; `Left()` is **not** called (instance stays alive).
 - Return: retrieve from cache → `Mounted()` + `Entered()`.
-- LRU eviction / `ClearKeepAliveCache`: `OnScreenEvicted` → `Left()`.
+- LRU eviction / `ClearKeepAliveCache`: `OnScreenEvicted` → `Left()` (outside the tree).
+- In a nested chain `KeepAlive` is decided per level; a kept child is cached in its parent's `ChildView`. See [`OnLeft` contract](./03-susscreen.md#the-onleft-cleanup-contract).
 - Cache key: `KeepAliveKey(route)` (`FullPath`, or path without query if `KeepAliveIgnoreQuery`).

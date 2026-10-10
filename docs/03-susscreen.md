@@ -72,7 +72,7 @@ public class BattleScreen : SusScreen
     //    undo anything it changed on its parents (shell captions, classes).
     protected override void OnLeaving(SusRoute toRoute) => ClearShellCaption();
 
-    // 6. Screen is being removed — unsubscribe, clean up resources.
+    // 6. Screen is removed and was not cached — unsubscribe, release resources.
     protected override void OnLeft() => CleanupBattle();
 }
 ```
@@ -95,14 +95,63 @@ Leave:
   8. OnBeforeLeave(to)       ← guard, false = cancel
      (then CanLeave, BeforeEach, CanEnter, per-route BeforeEnter)
   9. OnLeaving(to)           ← leave/enter guards passed; screen still in the tree
- 10. OnLeft()
- 11. SusRouteView removes screen (or hides on KeepAlive)
- 12. Unmounted()            ← SusComponent; NOT called on KeepAlive
+ 10. (BeforeResolve, target BeforeEnter — last cancellation points)
+ 11. OnLeft()               ← once, leaf → root, screen still in the tree
+ 12. SusRouteView removes screen (or moves it into the KeepAlive cache)
+ 13. Unmounted()            ← SusComponent; NOT called on KeepAlive
 ```
 
-With **KeepAlive** the screen is not recreated: `OnLeft()` runs, but the instance
-is hidden (not destroyed); on return — `OnBeforeEnter()` / `OnEntered()` again
-without a new `Build()`.
+With **KeepAlive** the screen is not recreated and **does not get `OnLeft()` when
+you leave it**: the instance is detached into the cache (not destroyed); on
+return — `OnBeforeEnter()` / `OnEntered()` again without a new `Build()`.
+`OnLeft()` arrives later, when the cache evicts it (see below).
+
+### The `OnLeft` cleanup contract
+
+`OnLeft()` is the place to unsubscribe events and release resources. It follows
+five invariants:
+
+1. **Once.** Every screen the navigation removes from the active chain and does
+   not put into the KeepAlive cache gets `OnLeft()` exactly once.
+2. **Leaf to root.** Same set and order as `OnLeaving`: a nested child runs
+   before its parent.
+3. **In the tree.** It runs before the router detaches anything, so `panel` and
+   `parent` are live (except after KeepAlive eviction, see 5).
+4. **After the last cancellation point.** It runs after the guards,
+   `BeforeResolve` and the target's `BeforeEnter`. A cancelled navigation never
+   leaves an active screen that was already cleaned up.
+5. **KeepAlive.** A screen moved into the cache gets no `OnLeft()` on leaving.
+   It gets it when the cache evicts it (LRU) or on `ClearKeepAliveCache`, and
+   then it runs **outside the tree**: the cache holds detached screens.
+
+| Path | `OnLeaving` | `OnLeft` | Tree at `OnLeft` |
+|---|---|---|---|
+| Single route → any route | once | once | live |
+| Nested chain → single route (`/a/x` → `/b`) | leaf, then root | leaf, then root | live |
+| Nested chain → another chain (`/a/x` → `/c/z`) | leaf, then root | leaf, then root | live |
+| Shared prefix kept (`/a/x` → `/a/y`) | `x` only | `x` only; `/a` stays | live |
+| Level with `KeepAlive` leaves | once | not called; the screen is cached | n/a |
+| Cached screen evicted or cache cleared | not called again | once | **detached** |
+| Parent without `KeepAlive` leaves while its `ChildView` caches children | once per screen | cached children (cache cleared first), then the parent: leaf to root | cached children detached, parent live |
+| Navigation cancelled (guard, `BeforeResolve`, `BeforeEnter` returns `false`) | may have run | not called | n/a |
+
+Rules of thumb:
+
+- Cleanup that depends on the tree (reading or writing ancestors, shell
+  captions, focus) goes in `OnLeaving`, which always runs with a live tree.
+- Cleanup that does not (unsubscribe, dispose, cancel timers) goes in
+  `OnLeft`, and must not assume a live `parent` or `panel`, because a cached
+  screen is evicted outside the tree.
+- `KeepAlive` is decided **per level** of a nested chain. A kept child is cached
+  in its parent's `ChildView` (outlet) and comes back only while that same parent
+  instance is reused. If the parent is recreated, its cache is empty and the child
+  is built again; if the parent leaves without `KeepAlive`, its cache is cleared
+  and the cached children receive `OnLeft`.
+- Previously `OnLeft` was skipped when a nested chain was left for a single-level
+  route and was lost for a KeepAlive child left for a sibling. Code that relied on
+  it **not** firing there (double unsubscribe, touching already released state)
+  must now tolerate the call. The order against the next screen also changed:
+  the next screen's `BeforeEnter` now runs **before** the old screen's `OnLeft`.
 
 ### `OnLeaving` — last call with a live tree
 
@@ -136,20 +185,14 @@ When it is called:
 
 Keep in mind:
 
-- The order of `OnLeaving` against `OnLeft` is not part of the contract. On
-  some paths `OnLeft` runs after the screen is already detached (`panel` is
-  null) — when the chain root changes and on KeepAlive eviction. It is
-  currently not called at all when a nested chain is left for a single-level
-  route, and when a KeepAlive screen inside a nested chain is left for a sibling
-  route (`/a/k` → `/a/x`). Code that needs the live tree belongs in
-  `OnLeaving`; `OnLeft` stays the place for unsubscribing and releasing
-  resources.
+- `OnLeaving` runs before `OnLeft` and always with a live tree; see
+  [`OnLeft`](#the-onleft-cleanup-contract) for the other half of the pair.
 - A `BeforeResolve` guard runs after `OnLeaving`. If it aborts the navigation,
-  the screen stays active although `OnLeaving` was already called (on a
-  single-level route without KeepAlive, `OnLeft` has run too), and
-  `OnEntered` is not called again. Do not abort navigation from
-  `BeforeResolve`; put checks that may cancel a leave into `OnBeforeLeave` or
-  another guard that runs before `OnLeaving`.
+  the screen stays active although `OnLeaving` was already called, and
+  `OnEntered` is not called again. `OnLeft` has **not** run, so the screen is
+  still intact. Still, prefer checks that may cancel a leave in `OnBeforeLeave`
+  or another guard that runs before `OnLeaving`, so `OnLeaving` side effects
+  are never undone halfway.
 
 ---
 
@@ -369,7 +412,7 @@ public class AppEntry : MonoBehaviour
   not present at `Build()` time into `Mounted()`.
 - `Router`/`Props` are available from `OnBeforeEnter()`, but **not** in `Created()`/`Build()`.
 - `Unmounted()` — on detach from the panel (after `OnLeft()`); with KeepAlive
-  the screen is hidden and `Unmounted()` is not called.
+  the screen is cached off the tree and `Unmounted()` is not called.
 
 ## Related docs
 

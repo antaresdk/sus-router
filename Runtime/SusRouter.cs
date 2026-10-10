@@ -55,7 +55,9 @@ namespace Sharq.Router
         ///    is cached, <c>Left()</c> is NOT called (screen stays "alive", only paused);
         ///  • return → retrieve from cache → <c>Mounted()</c> + <c>Entered()</c>;
         ///  • LRU eviction / <c>ClearKeepAliveCache</c> → <c>OnScreenEvicted</c> →
-        ///    <c>Left()</c> (final teardown).
+        ///    <c>Left()</c> (final teardown, outside the tree: cached screens are detached).
+        /// Non-KeepAlive screens get <c>Left()</c> once per leave, leaf → root, in the tree,
+        /// after the last cancellation point (navigation step 7.5).
         /// This is an intentional router "off-DOM cache", not core-<c>SusKeepAlive</c>.
         /// </summary>
         public string KeepAliveKey(SusRoute route)

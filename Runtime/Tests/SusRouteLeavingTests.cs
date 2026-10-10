@@ -18,9 +18,10 @@ namespace Sharq.Router.Runtime.Tests
     /// OnLeaving contract: once per leave, for every screen leaving the active chain,
     /// leaf → root, with parent and panel live, after every guard, before any detach.
     ///
-    /// OnLeft is pinned AS OBSERVED (its timing is unchanged by OnLeaving). Rows marked
-    /// "current OnLeft behavior" document paths where OnLeft runs outside the tree or does
-    /// not run at all; they are pinned so a future OnLeft fix flips them deliberately.
+    /// OnLeft contract: once per leave for every screen that leaves the chain and is not
+    /// cached by KeepAlive, leaf → root, while still in the tree, after the last
+    /// cancellation point (guards, BeforeResolve, the target's BeforeEnter). KeepAlive rows
+    /// are pinned as observed here; per-level KeepAlive in chains is a separate step.
     /// </summary>
     public class SusRouteLeavingTests
     {
@@ -100,6 +101,7 @@ namespace Sharq.Router.Runtime.Tests
         class PageP : ProbeScreen { }
         class PageK1 : ProbeScreen { }
         class PageK2 : ProbeScreen { }
+        class PageBlocked : ProbeScreen { protected override bool OnBeforeEnter(SusRoute from) => false; }
 
         // ── Setup / Teardown ─────────────────────────────────────────────────
 
@@ -128,6 +130,7 @@ namespace Sharq.Router.Runtime.Tests
             {
                 Children = new List<SusRouteRecord> { new SusRouteRecord("z", typeof(PaneZ)) }
             });
+            _router.Register("/blocked", typeof(PageBlocked));
             _router.Register("/b", typeof(PageB));
             _router.Register("/d", typeof(PageD));
             _router.Register("/p/:id", typeof(PageP));
@@ -168,6 +171,12 @@ namespace Sharq.Router.Runtime.Tests
             Assert.IsTrue(s.LeavingPanelLive, $"{s.GetType().Name}: panel live in OnLeaving");
         }
 
+        static void AssertLeftOnceInTree(ProbeScreen s)
+        {
+            Assert.AreEqual(1, s.LeftCount, $"{s.GetType().Name}: OnLeft exactly once");
+            Assert.IsTrue(s.LeftPanelLive, $"{s.GetType().Name}: panel live in OnLeft");
+        }
+
         IEnumerator MountAt(string path)
         {
             Assert.AreEqual(NavigationResult.Success, _router.Mount(_root, path));
@@ -192,7 +201,8 @@ namespace Sharq.Router.Runtime.Tests
             Assert.AreEqual("/a/y", x.LeavingTarget.FullPath);
             Assert.AreEqual(0, Single<ShellA>().LeavingCount, "shared shell does not leave");
 
-            // Current OnLeft behavior: called once, in the tree, after OnLeaving.
+            // OnLeft: called once, in the tree, after OnLeaving; the shared shell stays.
+            Assert.AreEqual(0, Single<ShellA>().LeftCount);
             Assert.AreEqual(1, x.LeftCount);
             Assert.IsTrue(x.LeftPanelLive);
             Assert.Less(IndexOf("Leaving:PaneX"), IndexOf("Left:PaneX"));
@@ -216,10 +226,9 @@ namespace Sharq.Router.Runtime.Tests
             Assert.AreNotSame(shell, _router.CurrentRoute.Value.Screen,
                 "a single-level target recreates the shell");
 
-            // Current OnLeft behavior: chain → single-level route skips OnLeft for the
-            // whole outgoing chain.
-            Assert.AreEqual(0, x.LeftCount, "current OnLeft behavior: leaf gets no OnLeft");
-            Assert.AreEqual(0, shell.LeftCount, "current OnLeft behavior: shell gets no OnLeft");
+            AssertLeftOnceInTree(x);
+            AssertLeftOnceInTree(shell);
+            Assert.Less(IndexOf("Left:PaneX"), IndexOf("Left:ShellA"), "OnLeft leaf → root");
         }
 
         [UnityTest]
@@ -238,13 +247,14 @@ namespace Sharq.Router.Runtime.Tests
             Assert.Less(IndexOf("Leaving:PaneX"), IndexOf("Leaving:ShellA"), "leaf → root");
             Assert.Less(IndexOf("Leaving:ShellA"), IndexOf("Entered:PageB"));
 
-            // Current OnLeft behavior: chain → single-level route skips OnLeft.
-            Assert.AreEqual(0, x.LeftCount, "current OnLeft behavior: leaf gets no OnLeft");
-            Assert.AreEqual(0, shell.LeftCount, "current OnLeft behavior: shell gets no OnLeft");
+            AssertLeftOnceInTree(x);
+            AssertLeftOnceInTree(shell);
+            Assert.Less(IndexOf("Left:PaneX"), IndexOf("Left:ShellA"), "OnLeft leaf → root");
+            Assert.Less(IndexOf("Left:ShellA"), IndexOf("Entered:PageB"));
         }
 
         [UnityTest]
-        public IEnumerator ChildToOtherChain_WholeChainLeaves_LeftOfLeafRunsDetached()
+        public IEnumerator ChildToOtherChain_WholeChainLeaves_LeftLeafToRoot_InTree()
         {
             yield return MountAt("/a/x");
             var x = Single<PaneX>();
@@ -258,13 +268,10 @@ namespace Sharq.Router.Runtime.Tests
             Assert.Less(IndexOf("Leaving:PaneX"), IndexOf("Leaving:ShellA"), "leaf → root");
             Assert.Less(IndexOf("Leaving:ShellA"), IndexOf("Left:ShellA"));
 
-            // Current OnLeft behavior: root → leaf; the shell is detached before the
-            // leaf's OnLeft, so the leaf gets OnLeft without a panel.
-            Assert.AreEqual(1, shell.LeftCount);
-            Assert.AreEqual(1, x.LeftCount);
-            Assert.IsTrue(shell.LeftPanelLive);
-            Assert.IsFalse(x.LeftPanelLive, "current OnLeft behavior: leaf OnLeft runs detached");
-            Assert.Less(IndexOf("Left:ShellA"), IndexOf("Left:PaneX"));
+            // OnLeft: leaf → root, both still in the tree.
+            AssertLeftOnceInTree(x);
+            AssertLeftOnceInTree(shell);
+            Assert.Less(IndexOf("Left:PaneX"), IndexOf("Left:ShellA"));
         }
 
         [UnityTest]
@@ -417,6 +424,52 @@ namespace Sharq.Router.Runtime.Tests
 
             Assert.AreEqual(0, Single<PaneX>().LeavingCount);
             Assert.AreEqual(0, Single<ShellA>().LeavingCount);
+        }
+
+        [UnityTest]
+        public IEnumerator BeforeResolveRejects_NoLeft_ScreenStaysActive()
+        {
+            yield return MountAt("/b");
+            var b = Single<PageB>();
+            _router.BeforeResolve((from, to) => false);
+
+            Assert.AreEqual(NavigationResult.Aborted, _router.Push("/d"));
+            yield return null;
+
+            Assert.AreEqual(0, b.LeftCount, "aborted navigation must not clean up the active screen");
+            Assert.IsNotNull(b.panel, "screen stays mounted");
+            Assert.AreSame(b, _router.CurrentRoute.Value.Screen);
+        }
+
+        [UnityTest]
+        public IEnumerator TargetBeforeEnterFalse_NoLeft()
+        {
+            yield return MountAt("/a/x");
+            var x = Single<PaneX>();
+            var shell = Single<ShellA>();
+
+            Assert.AreEqual(NavigationResult.Aborted, _router.Push("/blocked"));
+            yield return null;
+
+            Assert.AreEqual(0, x.LeftCount);
+            Assert.AreEqual(0, shell.LeftCount);
+            Assert.IsNotNull(x.panel, "leaf stays mounted");
+        }
+
+        [UnityTest]
+        public IEnumerator ChainToChain_SharedPrefix_OnlyTailLeft()
+        {
+            yield return MountAt("/a/x");
+            var x = Single<PaneX>();
+            var shell = Single<ShellA>();
+
+            Assert.AreEqual(NavigationResult.Success, _router.Push("/a/y"));
+            yield return null;
+
+            AssertLeftOnceInTree(x);
+            Assert.AreEqual(0, shell.LeftCount, "shared shell is reused, not left");
+            Assert.IsNotNull(shell.panel, "shared shell stays mounted");
+            Assert.AreEqual(0, Single<PaneY>().LeftCount);
         }
 
         // ── Async path ends in the same pass ─────────────────────────────────

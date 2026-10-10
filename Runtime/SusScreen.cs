@@ -171,10 +171,11 @@ namespace Sharq.Router
         /// prefix, or a same-record props update). Eviction from the KeepAlive cache does not
         /// call it again: the screen already left the chain.
         ///
-        /// Order against <see cref="OnLeft"/> is not a contract of this hook: OnLeft keeps its
-        /// existing timing and may run later, outside the tree, or not at all on some paths.
-        /// A BeforeResolve guard runs after this hook; if it aborts the navigation, the screen
-        /// stays active although OnLeaving was already called.
+        /// Order against <see cref="OnLeft"/>: OnLeaving runs first (after the guards), OnLeft
+        /// runs later in the same navigation, after the last cancellation point. A BeforeResolve
+        /// guard runs after this hook; if it (or the target's BeforeEnter) aborts the navigation,
+        /// the screen stays active although OnLeaving was already called, and OnLeft is not called.
+        /// Put tree-dependent cleanup here; OnLeft after a KeepAlive eviction runs outside the tree.
         /// </summary>
         /// <param name="toRoute">The route being navigated to.</param>
         protected virtual void OnLeaving(SusRoute toRoute) { }
@@ -193,6 +194,15 @@ namespace Sharq.Router
 
         /// <summary>
         /// Override to clean up (unsubscribe events, release resources).
+        ///
+        /// Contract: called exactly once for every screen the navigation removes from the active
+        /// chain and does not put into the KeepAlive cache; in leaf → root order (the same set
+        /// and order as <see cref="OnLeaving"/>); while the screen is still in the tree
+        /// (<c>panel</c> and <c>parent</c> are live); after the last cancellation point
+        /// (guards, BeforeResolve, the target's BeforeEnter), so an aborted navigation never
+        /// leaves an active screen already cleaned up. A screen moved into the KeepAlive cache
+        /// does not get OnLeft on leaving; it gets it on LRU eviction or
+        /// <c>ClearKeepAliveCache</c>, outside the tree (the cache holds detached screens).
         /// </summary>
         protected virtual void OnLeft() { }
 

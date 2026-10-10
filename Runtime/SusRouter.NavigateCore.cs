@@ -194,6 +194,26 @@ namespace Sharq.Router
         /// </summary>
         private void NotifyLeaving(SusRoute fromRoute, SusRoute toRoute)
         {
+            var leaving = CollectLeavingScreens(fromRoute, toRoute, out _);
+            for (int i = 0; i < leaving.Count; i++)
+                leaving[i].Leaving(toRoute);
+        }
+
+        /// <summary>
+        /// Single source of truth for "which screens leave the active chain on this
+        /// navigation", shared by <see cref="NotifyLeaving"/> (Leaving) and
+        /// <see cref="TeardownLeftScreens"/> (Left). Order is leaf → root. Screens of a
+        /// shared nested-chain prefix are reused by Step 6 and are excluded; KeepAlive
+        /// screens are included (callers decide what to do with them).
+        /// <paramref name="firstLeavingChainLevel"/> is the chain index of the last list
+        /// element (the first level below the shared prefix), or -1 for a single-level route.
+        /// </summary>
+        private static List<SusScreen> CollectLeavingScreens(SusRoute fromRoute, SusRoute toRoute,
+            out int firstLeavingChainLevel)
+        {
+            var result = new List<SusScreen>();
+            firstLeavingChainLevel = -1;
+
             var fromScreens = fromRoute.ChainScreens;
             if (fromScreens != null && fromScreens.Count > 1)
             {
@@ -204,18 +224,50 @@ namespace Sharq.Router
                 if (toChain != null && toChain.Count > 1)
                     keep = Math.Min(FindCommonPrefixDepth(fromRoute.MatchedChain, toChain), fromScreens.Count);
 
+                firstLeavingChainLevel = keep;
                 for (int i = fromScreens.Count - 1; i >= keep; i--)
-                    fromScreens[i]?.Leaving(toRoute);
-                return;
+                {
+                    if (fromScreens[i] != null)
+                        result.Add(fromScreens[i]);
+                }
+                return result;
             }
 
             if (fromRoute.IsActive && fromRoute.Screen != null
                 && !ReferenceEquals(fromRoute.Screen, toRoute.Screen))
-                fromRoute.Screen.Leaving(toRoute);
+                result.Add(fromRoute.Screen);
+            return result;
         }
 
         /// <summary>
-        /// Steps 5, 5.5, 6: tear down the outgoing screen (Left), run BeforeResolve guards
+        /// Step 7.5: the single teardown point. Runs after every cancellation point
+        /// (guards, BeforeResolve, the target's BeforeEnter) and before
+        /// <see cref="SusRouteView.OnRouteChanged"/> detaches anything: calls
+        /// <see cref="SusScreen.Left"/> once on each leaving non-KeepAlive screen, leaf → root,
+        /// while it is still in the tree; then detaches the tail of a nested chain that is
+        /// replaced by another chain. KeepAlive screens go to the cache without Left().
+        /// </summary>
+        private void TeardownLeftScreens(SusRoute fromRoute, SusRoute toRoute,
+            bool fromKeepAlive, bool hasMultiLevelChain)
+        {
+            var leaving = CollectLeavingScreens(fromRoute, toRoute, out _);
+            if (leaving.Count == 0 || fromKeepAlive)
+                return;
+
+            for (int i = 0; i < leaving.Count; i++)
+                leaving[i].Left();
+
+            // Detach the chain tail from its parent ChildView so shorter chains
+            // (e.g. /a/b/c -> /a/b) don't leave orphaned children visible. Leaf -> root.
+            if (hasMultiLevelChain)
+            {
+                for (int i = 0; i < leaving.Count; i++)
+                    leaving[i].RemoveFromHierarchy();
+            }
+        }
+
+        /// <summary>
+        /// Steps 5.5, 6: run BeforeResolve guards
         /// (before screen creation, so aborting has no side effects), then create or reuse
         /// the target screen(s) — chain-aware for nested routes. Outputs the chain depth info
         /// <see cref="FinalizeNavigation"/> needs for Entered().
@@ -226,14 +278,6 @@ namespace Sharq.Router
         {
             chainNewDepth = 0;
             hasMultiLevelChain = false;
-
-            // ── Step 5: Left ──
-            // For chain routes, teardown is handled in Step 6 (per-level, skips common prefix)
-            bool isFromChainRoute = fromRoute.ChainScreens != null && fromRoute.ChainScreens.Count > 1;
-            if (fromRoute.IsActive && fromRoute.Screen != null && !fromKeepAlive && !isFromChainRoute)
-            {
-                fromRoute.Screen.Left();
-            }
 
             // ── Step 5.5: BeforeResolve — BEFORE screen creation (avoids side effects on abort) ──
             foreach (var guard in _beforeResolveGuards)
@@ -252,22 +296,6 @@ namespace Sharq.Router
             {
                 int commonDepth = FindCommonPrefixDepth(fromChain, chain);
                 chainNewDepth = commonDepth;
-
-                // Teardown old screens beyond common prefix
-                if (fromRoute.ChainScreens != null)
-                {
-                    for (int i = commonDepth; i < fromRoute.ChainScreens.Count; i++)
-                    {
-                        var oldScreen = fromRoute.ChainScreens[i];
-                        if (oldScreen != null && !(fromRoute.Record?.Config?.KeepAlive ?? false))
-                        {
-                            oldScreen.Left();
-                            // Detach from its parent ChildView so shorter chains
-                            // (e.g. /a/b/c → /a/b) don't leave orphaned children visible.
-                            oldScreen.RemoveFromHierarchy();
-                        }
-                    }
-                }
 
                 // Build chain screens
                 var chainScreens = new List<SusScreen>();
@@ -375,6 +403,9 @@ namespace Sharq.Router
             {
                 _historyIndex += stepOffset;
             }
+
+            // ── Step 7.5: Left on leaving screens (after the last cancellation point, in the tree) ──
+            TeardownLeftScreens(fromRoute, toRoute, fromKeepAlive, hasMultiLevelChain);
 
             // ── Step 8: RouteView (must run BEFORE nulling fromRoute.Screen) ──
             _routeView?.OnRouteChanged(fromRoute, toRoute);

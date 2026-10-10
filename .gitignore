@@ -19,3 +19,9 @@ Thumbs.db
 # Unity-hidden ~ folders must not have folder .meta
 *~.meta
 
+
+# Secrets (R159): never commit credentials
+.env*
+!.env*.example
+*.pem
+*.key

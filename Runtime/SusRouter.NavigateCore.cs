@@ -40,8 +40,8 @@ namespace Sharq.Router
             }
 #endif
 
-            var fromKeepAlive = fromRoute.Record?.Config?.KeepAlive ?? false;
-            var targetKeepAlive = toRoute.Record?.Config?.KeepAlive ?? false;
+            var fromKeepAlive = IsKeepAliveLevel(fromRoute, 0);
+            var targetKeepAlive = IsKeepAliveLevel(toRoute, 0);
 
             // ── Step B: same-record param update (beforeRouteUpdate) ──
             if (fromRoute.Record == toRoute.Record && fromRoute.IsActive)
@@ -209,7 +209,7 @@ namespace Sharq.Router
         /// element (the first level below the shared prefix), or -1 for a single-level route.
         /// </summary>
         private static List<SusScreen> CollectLeavingScreens(SusRoute fromRoute, SusRoute toRoute,
-            out int firstLeavingChainLevel)
+            out int firstLeavingChainLevel, List<int> levels = null)
         {
             var result = new List<SusScreen>();
             firstLeavingChainLevel = -1;
@@ -227,15 +227,19 @@ namespace Sharq.Router
                 firstLeavingChainLevel = keep;
                 for (int i = fromScreens.Count - 1; i >= keep; i--)
                 {
-                    if (fromScreens[i] != null)
-                        result.Add(fromScreens[i]);
+                    if (fromScreens[i] == null) continue;
+                    result.Add(fromScreens[i]);
+                    levels?.Add(i);
                 }
                 return result;
             }
 
             if (fromRoute.IsActive && fromRoute.Screen != null
                 && !ReferenceEquals(fromRoute.Screen, toRoute.Screen))
+            {
                 result.Add(fromRoute.Screen);
+                levels?.Add(0);
+            }
             return result;
         }
 
@@ -250,19 +254,43 @@ namespace Sharq.Router
         private void TeardownLeftScreens(SusRoute fromRoute, SusRoute toRoute,
             bool fromKeepAlive, bool hasMultiLevelChain)
         {
-            var leaving = CollectLeavingScreens(fromRoute, toRoute, out _);
-            if (leaving.Count == 0 || fromKeepAlive)
-                return;
+            var levels = new List<int>();
+            var leaving = CollectLeavingScreens(fromRoute, toRoute, out _, levels);
+            var fromScreens = fromRoute.ChainScreens;
 
-            for (int i = 0; i < leaving.Count; i++)
-                leaving[i].Left();
-
-            // Detach the chain tail from its parent ChildView so shorter chains
-            // (e.g. /a/b/c -> /a/b) don't leave orphaned children visible. Leaf -> root.
-            if (hasMultiLevelChain)
+            // Leaf to root. KeepAlive is per level: a kept level >= 1 is cached in its
+            // parent's ChildView without Left(); a kept root is cached by the root outlet in
+            // SusRouteView.OnRouteChanged. Everything else gets Left() in the tree, after
+            // its own cached descendants were evicted.
+            for (int n = 0; n < leaving.Count; n++)
             {
-                for (int i = 0; i < leaving.Count; i++)
-                    leaving[i].RemoveFromHierarchy();
+                var screen = leaving[n];
+                int level = levels[n];
+                bool kept = IsKeepAliveLevel(fromRoute, level);
+
+                if (level == 0)
+                {
+                    if (kept) continue;
+                    foreach (var view in screen.ChildViews) view.ClearKeepAliveCache();
+                    screen.Left();
+                    continue;
+                }
+
+                var parentView = fromScreens != null && level - 1 < fromScreens.Count
+                    ? fromScreens[level - 1]?.ChildView : null;
+                if (kept && parentView != null)
+                {
+                    // Out of the ChildView first: a cached screen must not stay mounted.
+                    screen.RemoveFromHierarchy();
+                    parentView.CacheKeepAliveScreen(KeepAliveKey(fromRoute, level), screen);
+                    continue;
+                }
+
+                foreach (var view in screen.ChildViews) view.ClearKeepAliveCache();
+                screen.Left();
+                // Detach so shorter chains leave no orphans and a cached root never
+                // keeps a stale, already-left child mounted.
+                screen.RemoveFromHierarchy();
             }
         }
 
@@ -310,6 +338,14 @@ namespace Sharq.Router
                         levelScreen = fromRoute.ChainScreens[i];
                         levelScreen.Props = toRoute.Props;
                         levelScreen.BeforeRouteUpdate(toRoute);
+                    }
+                    else if (chain[i].Config.KeepAlive
+                        && TryTakeKeepAliveLevel(toRoute, chainScreens, i, out var cachedLevel))
+                    {
+                        // KeepAlive level: reuse the cached instance of this level's own outlet.
+                        levelScreen = cachedLevel;
+                        levelScreen.Props = toRoute.Props;
+                        levelScreen.BeforeEnter(fromRoute);
                     }
                     else
                     {
@@ -361,6 +397,19 @@ namespace Sharq.Router
             }
 
             return NavigationResult.Success;
+        }
+
+        /// <summary>
+        /// Looks up the KeepAlive cache of the outlet that hosts chain level
+        /// <paramref name="level"/> (root outlet for 0, the already-built parent's ChildView otherwise).
+        /// </summary>
+        private bool TryTakeKeepAliveLevel(SusRoute toRoute, List<SusScreen> built, int level,
+            out SusScreen screen)
+        {
+            screen = null;
+            SusRouteView outlet = level == 0 ? _routeView : built[level - 1]?.ChildView;
+            return outlet != null
+                && outlet.TryGetKeepAliveScreen(KeepAliveKey(toRoute, level), out screen);
         }
 
         /// <summary>

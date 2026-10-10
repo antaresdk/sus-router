@@ -36,7 +36,13 @@ namespace Sharq.Router
         }
 
         /// <summary>Run the screen lifecycle teardown when evicted from KeepAlive.</summary>
-        protected override void OnScreenEvicted(SusScreen screen) => screen.Left();
+        protected override void OnScreenEvicted(SusScreen screen)
+        {
+            // Descendants cached in this screen's own outlets go first (leaf to root).
+            foreach (var view in screen.ChildViews)
+                view.ClearKeepAliveCache();
+            screen.Left();
+        }
 
         /// <summary>
         /// Called by SusRouter.Navigate() when the route changes.
@@ -44,7 +50,7 @@ namespace Sharq.Router
         /// </summary>
         public void OnRouteChanged(SusRoute fromRoute, SusRoute toRoute)
         {
-            var fromKeepAlive = fromRoute?.Record?.Config?.KeepAlive ?? false;
+            var fromKeepAlive = SusRouter.IsKeepAliveLevel(fromRoute, 0);
 
             // A nested chain can reuse the shared-prefix root screen instance across
             // navigations. In that case fromRoute.Screen == toRoute.Screen — do NOT
@@ -63,7 +69,7 @@ namespace Sharq.Router
                 if (fromRoute.Screen.parent != null)
                     fromRoute.Screen.parent.Remove(fromRoute.Screen);
 
-                CacheKeepAliveScreen(Router?.KeepAliveKey(fromRoute) ?? fromRoute.FullPath, fromRoute.Screen);
+                CacheKeepAliveScreen(Router?.KeepAliveKey(fromRoute, 0) ?? fromRoute.FullPath, fromRoute.Screen);
                 fromRoute.Screen = null;
                 fromRoute.IsActive = false;
             }

@@ -20,8 +20,9 @@ namespace Sharq.Router.Runtime.Tests
     ///
     /// OnLeft contract: once per leave for every screen that leaves the chain and is not
     /// cached by KeepAlive, leaf → root, while still in the tree, after the last
-    /// cancellation point (guards, BeforeResolve, the target's BeforeEnter). KeepAlive rows
-    /// are pinned as observed here; per-level KeepAlive in chains is a separate step.
+    /// cancellation point (guards, BeforeResolve, the target's BeforeEnter). KeepAlive is
+    /// per chain level: a kept level is cached in its parent's ChildView (root: root outlet)
+    /// without OnLeft; eviction runs OnLeft outside the tree.
     /// </summary>
     public class SusRouteLeavingTests
     {
@@ -95,6 +96,9 @@ namespace Sharq.Router.Runtime.Tests
         class PaneX : ProbeScreen { }
         class PaneY : ProbeScreen { }
         class PaneK : ProbeScreen { }
+        class PaneK2 : ProbeScreen { }
+        class ShellM : ShellScreen { }
+        class PaneQ : ProbeScreen { }
         class PaneZ : ProbeScreen { }
         class PageB : ProbeScreen { }
         class PageD : ProbeScreen { }
@@ -124,7 +128,13 @@ namespace Sharq.Router.Runtime.Tests
                     new SusRouteRecord("x", typeof(PaneX)),
                     new SusRouteRecord("y", typeof(PaneY)),
                     new SusRouteRecord("k", typeof(PaneK), new SusRouteConfig { KeepAlive = true }),
+                    new SusRouteRecord("k2", typeof(PaneK2), new SusRouteConfig { KeepAlive = true }),
                 }
+            });
+            _router.Register("/m", typeof(ShellM), new SusRouteConfig
+            {
+                KeepAlive = true,
+                Children = new List<SusRouteRecord> { new SusRouteRecord("q", typeof(PaneQ)) }
             });
             _router.Register("/c", typeof(ShellC), new SusRouteConfig
             {
@@ -287,10 +297,83 @@ namespace Sharq.Router.Runtime.Tests
             Assert.IsTrue(k.LeavingShellLive);
             Assert.AreEqual(0, Single<ShellA>().LeavingCount);
 
-            // Current OnLeft behavior: a KeepAlive leaf inside a chain is swapped out of the
-            // ChildView without OnLeft.
-            Assert.AreEqual(0, k.LeftCount, "current OnLeft behavior: KeepAlive chain leaf gets no OnLeft");
-            Assert.IsNull(k.parent, "leaf is out of the tree after the navigation");
+            // Per-level KeepAlive: the kept leaf is cached in the shell's ChildView, no OnLeft.
+            Assert.AreEqual(0, k.LeftCount, "KeepAlive chain leaf is cached, not torn down");
+            Assert.IsNull(k.parent, "cached leaf is out of the tree");
+
+            Log.Clear();
+            Assert.AreEqual(NavigationResult.Success, _router.Push("/a/k"));
+            yield return null;
+
+            Assert.AreSame(k, Single<PaneK>(), "same instance returns from the cache");
+            Assert.IsTrue(Log.Contains("Entered:PaneK"), "Entered runs on cache re-entry");
+            Assert.IsNotNull(k.panel, "cached leaf is mounted again");
+            Assert.AreEqual(0, k.LeftCount);
+        }
+
+        [UnityTest]
+        public IEnumerator KeepAliveChainLeaf_Evicted_LeftOnce()
+        {
+            yield return MountAt("/a/k");
+            var k = Single<PaneK>();
+            Single<ShellA>().ChildView.MaxKeepAlive = 1;
+
+            Assert.AreEqual(NavigationResult.Success, _router.Push("/a/k2"));
+            yield return null;
+            Assert.AreEqual(0, k.LeftCount, "k is cached");
+
+            Assert.AreEqual(NavigationResult.Success, _router.Push("/a/x"));
+            yield return null;
+
+            Assert.AreEqual(1, k.LeftCount, "k evicted by k2: OnLeft exactly once");
+            Assert.IsFalse(k.LeftPanelLive, "eviction runs OnLeft outside the tree");
+            Assert.AreEqual(0, Single<PaneK2>().LeftCount, "k2 is cached");
+        }
+
+        [UnityTest]
+        public IEnumerator ShellLeaves_ClearsChildKeepAliveCache_LeafToRoot()
+        {
+            yield return MountAt("/a/k");
+            var k = Single<PaneK>();
+            var shell = Single<ShellA>();
+
+            Assert.AreEqual(NavigationResult.Success, _router.Push("/a/x"));
+            yield return null;
+            var x = Single<PaneX>();
+            Assert.AreEqual(0, k.LeftCount);
+
+            Assert.AreEqual(NavigationResult.Success, _router.Push("/b"));
+            yield return null;
+
+            Assert.AreEqual(1, k.LeftCount, "cached child gets OnLeft when its non-KeepAlive parent leaves");
+            Assert.AreEqual(1, x.LeftCount);
+            AssertLeftOnceInTree(shell);
+            Assert.Less(IndexOf("Left:PaneX"), IndexOf("Left:ShellA"));
+            Assert.Less(IndexOf("Left:PaneK"), IndexOf("Left:ShellA"), "cached child before its parent");
+        }
+
+        [UnityTest]
+        public IEnumerator KeepAliveChainRoot_CachedUnderOwnKey()
+        {
+            yield return MountAt("/m/q");
+            var shell = Single<ShellM>();
+            var q = Single<PaneQ>();
+
+            Assert.AreEqual(NavigationResult.Success, _router.Push("/b"));
+            yield return null;
+
+            Assert.AreEqual(0, shell.LeftCount, "kept root is cached, not torn down");
+            Assert.IsNull(shell.parent);
+            AssertLeftOnceInTree(q);
+
+            Log.Clear();
+            Assert.AreEqual(NavigationResult.Success, _router.Push("/m/q"));
+            yield return null;
+
+            Assert.AreSame(shell, Single<ShellM>(), "root returns from the root outlet cache");
+            Assert.IsTrue(Log.Contains("Entered:ShellM"));
+            Assert.IsNotNull(shell.panel);
+            Assert.AreEqual(0, shell.LeftCount);
         }
 
         // ── Matrix: single-level routes ──────────────────────────────────────

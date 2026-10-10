@@ -58,6 +58,10 @@ namespace Sharq.Router
         ///    <c>Left()</c> (final teardown, outside the tree: cached screens are detached).
         /// Non-KeepAlive screens get <c>Left()</c> once per leave, leaf → root, in the tree,
         /// after the last cancellation point (navigation step 7.5).
+        /// KeepAlive is per chain level: a KeepAlive level i >= 1 is cached in its parent
+        /// screen's ChildView (<see cref="KeepAliveKey(SusRoute, int)"/>); level 0 in the root
+        /// outlet. A non-KeepAlive parent that leaves clears its ChildView caches first, so
+        /// cached descendants get <c>Left()</c> by eviction, leaf to root.
         /// This is an intentional router "off-DOM cache", not core-<c>SusKeepAlive</c>.
         /// </summary>
         public string KeepAliveKey(SusRoute route)
@@ -67,6 +71,57 @@ namespace Sharq.Router
             if (!KeepAliveIgnoreQuery) return full;
             var q = full.IndexOf('?');
             return q >= 0 ? full.Substring(0, q) : full;
+        }
+
+        /// <summary>
+        /// Whether chain level <paramref name="level"/> of <paramref name="route"/> is
+        /// KeepAlive. KeepAlive is per level: it is read from that level's own
+        /// <see cref="SusRouteConfig"/>, not from the leaf record. Single-level routes
+        /// have one level (the record itself).
+        /// </summary>
+        internal static bool IsKeepAliveLevel(SusRoute route, int level)
+        {
+            if (route == null) return false;
+            var chain = route.MatchedChain;
+            if (chain != null && chain.Count > 1 && level >= 0 && level < chain.Count)
+                return chain[level].Config?.KeepAlive ?? false;
+            return route.Record?.Config?.KeepAlive ?? false;
+        }
+
+        /// <summary>
+        /// KeepAlive cache key of chain level <paramref name="level"/>: the record path
+        /// prefix root to level plus the path-param values those records declare (so
+        /// <c>/u/1/tab</c> and <c>/u/2/tab</c> cache apart) and, for the leaf only, the
+        /// query string unless <see cref="KeepAliveIgnoreQuery"/>. Single-level routes
+        /// use <see cref="KeepAliveKey(SusRoute)"/>. The cache lives in the outlet that
+        /// hosts the level: the root outlet for level 0, the parent screen's ChildView otherwise.
+        /// </summary>
+        public string KeepAliveKey(SusRoute route, int level)
+        {
+            if (route == null) return null;
+            var chain = route.MatchedChain;
+            if (chain == null || chain.Count <= 1) return KeepAliveKey(route);
+            if (level < 0 || level >= chain.Count) return null;
+
+            var sb = new System.Text.StringBuilder("chain:");
+            for (int i = 0; i <= level; i++)
+            {
+                var rec = chain[i];
+                sb.Append('/').Append(rec.Path);
+                if (rec.ParamNames == null) continue;
+                foreach (var name in rec.ParamNames)
+                {
+                    route.Params.TryGetValue(name, out var v);
+                    sb.Append('|').Append(name).Append('=').Append(v);
+                }
+            }
+            if (level == chain.Count - 1 && !KeepAliveIgnoreQuery)
+            {
+                var full = route.FullPath ?? string.Empty;
+                var q = full.IndexOf('?');
+                if (q >= 0) sb.Append(full.Substring(q));
+            }
+            return sb.ToString();
         }
 
         // ─── Re-entrancy guard ───

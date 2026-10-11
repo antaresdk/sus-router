@@ -121,8 +121,9 @@ five invariants:
    `BeforeResolve` and the `BeforeEnter` of every screen in the target chain.
    `OnBeforeEnter` returning `false` cancels the navigation at **any level** of
    a nested target (root, middle or leaf) and for a screen reused from the
-   KeepAlive cache; `OnBeforeRouteUpdate` returning `false` cancels it for a
-   reused parent whose `Props` change. Decide before mutating state: nothing
+   KeepAlive cache; `OnBeforeRouteUpdate` is called on **every** reused
+   shared-prefix screen of the chain (whether or not its `Props` changed), and
+   returning `false` from any of them cancels the navigation. Decide before mutating state: nothing
    you changed inside the rejecting callback is rolled back. A cancelled
    navigation never leaves an active screen that was already cleaned up.
 5. **KeepAlive.** A screen moved into the cache gets no `OnLeft()` on leaving.

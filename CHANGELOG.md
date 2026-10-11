@@ -5,6 +5,15 @@ All notable changes to this package are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- A screen `OnBeforeEnter` that returns `false` now cancels the navigation at every level of the target: fresh and KeepAlive-reused levels of a nested chain, and KeepAlive single-level targets. `OnBeforeRouteUpdate` returning `false` on a reused shared-prefix screen cancels it too. Previously only a fresh single-level screen was honoured and the navigation committed anyway.
+- A cancelled navigation has no side effects: `Props` of reused screens are restored, no `OnLeft`, no `Entered`, KeepAlive caches stay intact.
+
+### Notes
+- Behavior change to check in your screens: a nested or KeepAlive `OnBeforeEnter` / `OnBeforeRouteUpdate` that returned `false` by accident (and was ignored before) now blocks the navigation.
+
 ## [1.0.21] - 2026-10-11
 
 ### Changed

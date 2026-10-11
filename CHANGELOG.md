@@ -5,15 +5,6 @@ All notable changes to this package are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-### Fixed
-- A screen `OnBeforeEnter` that returns `false` now cancels the navigation at every level of the target: fresh and KeepAlive-reused levels of a nested chain, and KeepAlive single-level targets. `OnBeforeRouteUpdate` returning `false` on a reused shared-prefix screen cancels it too. Previously only a fresh single-level screen was honoured and the navigation committed anyway.
-- A cancelled navigation has no side effects: `Props` of reused screens are restored, no `OnLeft`, no `Entered`, KeepAlive caches stay intact.
-
-### Notes
-- Behavior change to check in your screens: a nested or KeepAlive `OnBeforeEnter` / `OnBeforeRouteUpdate` that returned `false` by accident (and was ignored before) now blocks the navigation.
-
 ## [1.0.21] - 2026-10-11
 
 ### Changed
@@ -24,9 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `OnLeft` was not called when leaving a nested chain for a single-level route, and when leaving a KeepAlive leaf of a nested chain. It is now called on both paths.
 - `KeepAlive` is now applied per level of a nested chain: a kept level is cached in its parent's `ChildView` (the same instance returns on re-entry, `Entered` fires again) instead of being lost without `OnLeft`.
 - A leaving non-KeepAlive parent clears its `ChildView` KeepAlive cache first, so cached children receive `OnLeft` (leaf to root).
+- A screen `OnBeforeEnter` that returns `false` now cancels the navigation at every level of the target: fresh and KeepAlive-reused levels of a nested chain, and KeepAlive single-level targets. `OnBeforeRouteUpdate` returning `false` on a reused shared-prefix screen cancels it too. Previously only a fresh single-level screen was honoured and the navigation committed anyway.
+- A cancelled navigation has no side effects: `Props` of reused screens are restored, no `OnLeft`, no `Entered`, KeepAlive caches stay intact.
 
 ### Notes
 - Behavior change to check in your screens: `OnLeft` cleanup that relied on running early (before guards) or outside the tree should move accordingly. Screens moved into the KeepAlive cache do not get `OnLeft` on leave; on KeepAlive eviction `OnLeft` runs outside the tree (`panel` is null).
+- Behavior change to check in your screens: a nested or KeepAlive `OnBeforeEnter` / `OnBeforeRouteUpdate` that returned `false` by accident (and was ignored before) now blocks the navigation.
 
 ## [1.0.20] - 2026-09-25
 

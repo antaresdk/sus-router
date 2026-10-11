@@ -118,8 +118,13 @@ five invariants:
 3. **In the tree.** It runs before the router detaches anything, so `panel` and
    `parent` are live (except after KeepAlive eviction, see 5).
 4. **After the last cancellation point.** It runs after the guards,
-   `BeforeResolve` and the target's `BeforeEnter`. A cancelled navigation never
-   leaves an active screen that was already cleaned up.
+   `BeforeResolve` and the `BeforeEnter` of every screen in the target chain.
+   `OnBeforeEnter` returning `false` cancels the navigation at **any level** of
+   a nested target (root, middle or leaf) and for a screen reused from the
+   KeepAlive cache; `OnBeforeRouteUpdate` returning `false` cancels it for a
+   reused parent whose `Props` change. Decide before mutating state: nothing
+   you changed inside the rejecting callback is rolled back. A cancelled
+   navigation never leaves an active screen that was already cleaned up.
 5. **KeepAlive.** A screen moved into the cache gets no `OnLeft()` on leaving.
    It gets it when the cache evicts it (LRU) or on `ClearKeepAliveCache`, and
    then it runs **outside the tree**: the cache holds detached screens.
@@ -133,7 +138,7 @@ five invariants:
 | Level with `KeepAlive` leaves | once | not called; the screen is cached | n/a |
 | Cached screen evicted or cache cleared | not called again | once | **detached** |
 | Parent without `KeepAlive` leaves while its `ChildView` caches children | once per screen | cached children (cache cleared first), then the parent: leaf to root | cached children detached, parent live |
-| Navigation cancelled (guard, `BeforeResolve`, `BeforeEnter` returns `false`) | may have run | not called | n/a |
+| Navigation cancelled (guard, `BeforeResolve`, `OnBeforeEnter` / `OnBeforeRouteUpdate` returns `false` at any level of a nested target, including a KeepAlive-reused screen) | may have run | not called | n/a |
 
 Rules of thumb:
 

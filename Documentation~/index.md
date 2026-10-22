@@ -18,7 +18,7 @@ Add the dependency (free, MIT) via Package Manager → *Add package from git URL
 <!-- sus:gen urls -->
 ```json
 "com.sharq-it.sus.router": "https://github.com/antaresdk/sus-router.git#v1.0.21",
-"com.sharq-it.sus.core":   "https://github.com/antaresdk/sus-core.git#v1.3.5"
+"com.sharq-it.sus.core":   "https://github.com/antaresdk/sus-core.git#v1.3.8"
 ```
 <!-- /sus:gen -->
 
